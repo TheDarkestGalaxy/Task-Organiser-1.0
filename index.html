@@ -39,6 +39,23 @@
             </select>
             <button type="submit" class="btn btn-primary">Add Task</button>
           </div>
+          <div class="form-row">
+            <input
+              type="date"
+              id="task-due-date"
+              class="input input-date"
+              aria-label="Due date"
+            />
+            <input
+              type="text"
+              id="task-category"
+              class="input"
+              placeholder="Category (e.g. Work, Personal)"
+              list="category-suggestions"
+              autocomplete="off"
+            />
+            <datalist id="category-suggestions"></datalist>
+          </div>
           <textarea
             id="task-description"
             class="textarea"
@@ -49,13 +66,29 @@
       </section>
 
       <section class="filters-section">
-        <div class="filters">
-          <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="bookmarked">Bookmarked</button>
-          <button class="filter-btn" data-filter="low">Low</button>
-          <button class="filter-btn" data-filter="medium">Medium</button>
-          <button class="filter-btn" data-filter="high">High</button>
-          <button class="filter-btn" data-filter="critical">Critical</button>
+        <div class="filter-groups">
+          <div class="filter-group">
+            <span class="filter-label">Status</span>
+            <div class="filters" id="status-filters">
+              <button class="filter-btn active" data-filter="all">All</button>
+              <button class="filter-btn" data-filter="active">Active</button>
+              <button class="filter-btn" data-filter="completed">Completed</button>
+              <button class="filter-btn" data-filter="bookmarked">Bookmarked</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">Importance</span>
+            <div class="filters" id="importance-filters">
+              <button class="filter-btn" data-filter="low">Low</button>
+              <button class="filter-btn" data-filter="medium">Medium</button>
+              <button class="filter-btn" data-filter="high">High</button>
+              <button class="filter-btn" data-filter="critical">Critical</button>
+            </div>
+          </div>
+          <div class="filter-group" id="category-filter-group">
+            <span class="filter-label">Category</span>
+            <div class="filters" id="category-filters"></div>
+          </div>
         </div>
         <p class="task-count" id="task-count">0 tasks</p>
       </section>

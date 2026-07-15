@@ -144,14 +144,43 @@ body {
   background: var(--accent-hover);
 }
 
+.input-date {
+  min-width: 150px;
+}
+
+.input-date::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
+}
+
 /* Filters */
 .filters-section {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 1rem;
   margin-bottom: 1.25rem;
+}
+
+.filter-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.filter-group.hidden {
+  display: none;
+}
+
+.filter-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+  display: block;
 }
 
 .filters {
@@ -220,6 +249,23 @@ body {
 
 .task-card.bookmarked {
   border-left: 3px solid var(--bookmark);
+}
+
+.task-card.completed {
+  opacity: 0.55;
+}
+
+.task-card.completed .task-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.task-card.overdue {
+  border-left: 3px solid var(--critical);
+}
+
+.task-card.today:not(.completed) {
+  border-left: 3px solid var(--medium);
 }
 
 @keyframes slideIn {
@@ -291,6 +337,72 @@ body {
 .importance-badge.critical {
   background: rgba(232, 74, 106, 0.15);
   color: var(--critical);
+}
+
+.category-badge {
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(108, 140, 255, 0.12);
+  color: var(--accent);
+}
+
+.due-date.overdue {
+  color: var(--critical);
+  font-weight: 600;
+}
+
+.due-date.today {
+  color: var(--medium);
+  font-weight: 600;
+}
+
+/* Checkbox */
+.checkbox-wrapper {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 0.15rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.complete-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.checkbox-custom {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-radius: 5px;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.complete-checkbox:checked + .checkbox-custom {
+  background: var(--low);
+  border-color: var(--low);
+}
+
+.complete-checkbox:checked + .checkbox-custom::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 6px;
+  height: 11px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox-wrapper:hover .checkbox-custom {
+  border-color: var(--accent);
 }
 
 .task-actions {
