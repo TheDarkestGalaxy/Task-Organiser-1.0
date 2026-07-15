@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Organiser</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-content">
+        <h1 class="logo">Task Organiser</h1>
+        <p class="tagline">Stay on top of what matters</p>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="create-section">
+        <h2 class="section-title">New Task</h2>
+        <form id="task-form" class="task-form">
+          <div class="form-row">
+            <input
+              type="text"
+              id="task-title"
+              class="input"
+              placeholder="What needs to be done?"
+              required
+              autocomplete="off"
+            />
+            <select id="task-importance" class="select" aria-label="Importance level">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+            <button type="submit" class="btn btn-primary">Add Task</button>
+          </div>
+          <textarea
+            id="task-description"
+            class="textarea"
+            placeholder="Optional details..."
+            rows="2"
+          ></textarea>
+        </form>
+      </section>
+
+      <section class="filters-section">
+        <div class="filters">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="bookmarked">Bookmarked</button>
+          <button class="filter-btn" data-filter="low">Low</button>
+          <button class="filter-btn" data-filter="medium">Medium</button>
+          <button class="filter-btn" data-filter="high">High</button>
+          <button class="filter-btn" data-filter="critical">Critical</button>
+        </div>
+        <p class="task-count" id="task-count">0 tasks</p>
+      </section>
+
+      <section class="tasks-section">
+        <ul id="task-list" class="task-list"></ul>
+        <div id="empty-state" class="empty-state">
+          <div class="empty-icon">📋</div>
+          <p class="empty-title">No tasks yet</p>
+          <p class="empty-subtitle">Create your first task above to get started</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
