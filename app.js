@@ -16,6 +16,9 @@ const categorySuggestions = document.getElementById("category-suggestions");
 const taskList = document.getElementById("task-list");
 const emptyState = document.getElementById("empty-state");
 const taskCount = document.getElementById("task-count");
+const statActive = document.getElementById("stat-active");
+const statOverdue = document.getElementById("stat-overdue");
+const statDone = document.getElementById("stat-done");
 const statusFilters = document.getElementById("status-filters");
 const importanceFilters = document.getElementById("importance-filters");
 const categoryFilters = document.getElementById("category-filters");
@@ -208,8 +211,13 @@ function render() {
 
   const filtered = sortTasks(getFilteredTasks());
   const activeCount = tasks.filter((t) => !t.completed).length;
+  const doneCount = tasks.filter((t) => t.completed).length;
+  const overdueCount = tasks.filter((t) => !t.completed && getDueDateStatus(t) === "overdue").length;
 
-  taskCount.textContent = `${filtered.length} task${filtered.length !== 1 ? "s" : ""} · ${activeCount} active`;
+  statActive.textContent = activeCount;
+  statOverdue.textContent = overdueCount;
+  statDone.textContent = doneCount;
+  taskCount.textContent = `${filtered.length} shown`;
 
   if (filtered.length === 0) {
     taskList.classList.add("hidden");
@@ -288,9 +296,9 @@ function renderTaskCard(task) {
         </div>
         ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ""}
         <p class="task-meta">
-          ${task.dueDate ? `<span class="due-date ${dueStatus}">${formatDueDate(task.dueDate)}</span> · ` : ""}
-          Created ${formatDateTime(task.createdAt)}
-          ${task.completed && task.completedAt ? ` · Done ${formatDateTime(task.completedAt)}` : ""}
+          ${task.dueDate ? `<span class="due-date ${dueStatus}">${formatDueDate(task.dueDate)}</span><span class="meta-sep">·</span>` : ""}
+          <span>Created ${formatDateTime(task.createdAt)}</span>
+          ${task.completed && task.completedAt ? `<span class="meta-sep">·</span><span>Done ${formatDateTime(task.completedAt)}</span>` : ""}
         </p>
       </div>
       <div class="task-actions">

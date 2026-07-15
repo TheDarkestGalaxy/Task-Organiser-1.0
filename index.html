@@ -12,62 +12,93 @@
 <body>
   <div class="app">
     <header class="header">
-      <div class="header-content">
-        <h1 class="logo">Task Organiser</h1>
-        <p class="tagline">Stay on top of what matters</p>
+      <div class="header-top">
+        <div>
+          <h1 class="logo">Task Organiser</h1>
+          <p class="tagline">Stay on top of what matters</p>
+        </div>
+        <div class="header-stats" id="header-stats">
+          <div class="stat">
+            <span class="stat-value" id="stat-active">0</span>
+            <span class="stat-label">Active</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="stat-overdue">0</span>
+            <span class="stat-label">Overdue</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="stat-done">0</span>
+            <span class="stat-label">Done</span>
+          </div>
+        </div>
       </div>
     </header>
 
     <main class="main">
-      <section class="create-section">
-        <h2 class="section-title">New Task</h2>
+      <section class="panel create-section">
+        <h2 class="panel-title">New Task</h2>
         <form id="task-form" class="task-form">
-          <div class="form-row">
-            <input
-              type="text"
-              id="task-title"
-              class="input"
-              placeholder="What needs to be done?"
-              required
-              autocomplete="off"
-            />
-            <select id="task-importance" class="select" aria-label="Importance level">
-              <option value="low">Low</option>
-              <option value="medium" selected>Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
+          <div class="form-grid">
+            <div class="field field-wide">
+              <label class="field-label" for="task-title">Title</label>
+              <input
+                type="text"
+                id="task-title"
+                class="input"
+                placeholder="What needs to be done?"
+                required
+                autocomplete="off"
+              />
+            </div>
+            <div class="field">
+              <label class="field-label" for="task-importance">Importance</label>
+              <select id="task-importance" class="select">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="task-due-date">Due date</label>
+              <input type="date" id="task-due-date" class="input input-date" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="task-category">Category</label>
+              <input
+                type="text"
+                id="task-category"
+                class="input"
+                placeholder="Work, Personal…"
+                list="category-suggestions"
+                autocomplete="off"
+              />
+              <datalist id="category-suggestions"></datalist>
+            </div>
+            <div class="field field-wide">
+              <label class="field-label" for="task-description">Details <span class="optional">optional</span></label>
+              <textarea
+                id="task-description"
+                class="textarea"
+                placeholder="Add any extra context…"
+                rows="2"
+              ></textarea>
+            </div>
+          </div>
+          <div class="form-actions">
             <button type="submit" class="btn btn-primary">Add Task</button>
           </div>
-          <div class="form-row">
-            <input
-              type="date"
-              id="task-due-date"
-              class="input input-date"
-              aria-label="Due date"
-            />
-            <input
-              type="text"
-              id="task-category"
-              class="input"
-              placeholder="Category (e.g. Work, Personal)"
-              list="category-suggestions"
-              autocomplete="off"
-            />
-            <datalist id="category-suggestions"></datalist>
-          </div>
-          <textarea
-            id="task-description"
-            class="textarea"
-            placeholder="Optional details..."
-            rows="2"
-          ></textarea>
         </form>
       </section>
 
-      <section class="filters-section">
-        <div class="filter-groups">
-          <div class="filter-group">
+      <section class="panel filters-section">
+        <div class="filters-header">
+          <h2 class="panel-title">Filters</h2>
+          <p class="task-count" id="task-count">0 tasks</p>
+        </div>
+
+        <div class="filter-rows">
+          <div class="filter-row">
             <span class="filter-label">Status</span>
             <div class="filters" id="status-filters">
               <button class="filter-btn active" data-filter="all">All</button>
@@ -76,7 +107,7 @@
               <button class="filter-btn" data-filter="bookmarked">Bookmarked</button>
             </div>
           </div>
-          <div class="filter-group">
+          <div class="filter-row">
             <span class="filter-label">Importance</span>
             <div class="filters" id="importance-filters">
               <button class="filter-btn" data-filter="low">Low</button>
@@ -85,17 +116,16 @@
               <button class="filter-btn" data-filter="critical">Critical</button>
             </div>
           </div>
-          <div class="filter-group" id="category-filter-group">
+          <div class="filter-row hidden" id="category-filter-group">
             <span class="filter-label">Category</span>
             <div class="filters" id="category-filters"></div>
           </div>
         </div>
-        <p class="task-count" id="task-count">0 tasks</p>
       </section>
 
       <section class="tasks-section">
         <ul id="task-list" class="task-list"></ul>
-        <div id="empty-state" class="empty-state">
+        <div id="empty-state" class="empty-state panel">
           <div class="empty-icon">📋</div>
           <p class="empty-title">No tasks yet</p>
           <p class="empty-subtitle">Create your first task above to get started</p>
