@@ -23,19 +23,6 @@ const statusFilters = document.getElementById("status-filters");
 const importanceFilters = document.getElementById("importance-filters");
 const categoryFilters = document.getElementById("category-filters");
 const categoryFilterGroup = document.getElementById("category-filter-group");
-const sidebar = document.getElementById("sidebar");
-const sidebarToggle = document.getElementById("sidebar-toggle");
-const sidebarBackdrop = document.getElementById("sidebar-backdrop");
-
-sidebarToggle.addEventListener("click", () => {
-  sidebar.classList.toggle("open");
-  sidebarBackdrop.classList.toggle("visible");
-});
-
-sidebarBackdrop.addEventListener("click", () => {
-  sidebar.classList.remove("open");
-  sidebarBackdrop.classList.remove("visible");
-});
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -69,13 +56,12 @@ importanceFilters.addEventListener("click", handleFilterClick);
 categoryFilters.addEventListener("click", handleFilterClick);
 
 function handleFilterClick(e) {
-  const btn = e.target.closest(".filter-btn");
+  const btn = e.target.closest(".nav-btn, .filter-btn");
   if (!btn) return;
 
-  document.querySelectorAll(".filter-btn").forEach((b) => b.classList.remove("active"));
+  document.querySelectorAll(".nav-btn, .filter-btn").forEach((b) => b.classList.remove("active"));
   btn.classList.add("active");
   activeFilter = btn.dataset.filter;
-  closeSidebarOnMobile();
   render();
 }
 
@@ -204,16 +190,9 @@ function renderCategoryFilters() {
   categoryFilters.innerHTML = categories
     .map(
       (cat) =>
-        `<button class="filter-btn${activeFilter === categoryFilterKey(cat) ? " active" : ""}" data-filter="${categoryFilterKey(cat)}">${escapeHtml(cat)}</button>`
+        `<button class="nav-btn filter-btn${activeFilter === categoryFilterKey(cat) ? " active" : ""}" data-filter="${categoryFilterKey(cat)}">${escapeHtml(cat)}</button>`
     )
     .join("");
-}
-
-function closeSidebarOnMobile() {
-  if (window.innerWidth <= 720) {
-    sidebar.classList.remove("open");
-    sidebarBackdrop.classList.remove("visible");
-  }
 }
 
 function renderCategorySuggestions() {
