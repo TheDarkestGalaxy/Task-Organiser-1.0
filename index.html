@@ -10,127 +10,130 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <div class="app">
-    <header class="header">
-      <div class="header-top">
-        <div>
-          <h1 class="logo">Task Organiser</h1>
-          <p class="tagline">Stay on top of what matters</p>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h1 class="logo">Task Organiser</h1>
+        <p class="tagline">Stay on top of what matters</p>
+      </div>
+
+      <div class="sidebar-stats">
+        <div class="stat">
+          <span class="stat-value" id="stat-active">0</span>
+          <span class="stat-label">Active</span>
         </div>
-        <div class="header-stats" id="header-stats">
-          <div class="stat">
-            <span class="stat-value" id="stat-active">0</span>
-            <span class="stat-label">Active</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="stat-overdue">0</span>
-            <span class="stat-label">Overdue</span>
-          </div>
-          <div class="stat">
-            <span class="stat-value" id="stat-done">0</span>
-            <span class="stat-label">Done</span>
-          </div>
+        <div class="stat">
+          <span class="stat-value" id="stat-overdue">0</span>
+          <span class="stat-label">Overdue</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="stat-done">0</span>
+          <span class="stat-label">Done</span>
         </div>
       </div>
-    </header>
+
+      <nav class="sidebar-nav">
+        <div class="sidebar-section">
+          <h2 class="sidebar-heading">Status</h2>
+          <div class="sidebar-filters" id="status-filters">
+            <button class="filter-btn active" data-filter="all">All tasks</button>
+            <button class="filter-btn" data-filter="active">Active</button>
+            <button class="filter-btn" data-filter="completed">Completed</button>
+            <button class="filter-btn" data-filter="bookmarked">Bookmarked</button>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <h2 class="sidebar-heading">Importance</h2>
+          <div class="sidebar-filters" id="importance-filters">
+            <button class="filter-btn" data-filter="low">
+              <span class="dot dot-low"></span> Low
+            </button>
+            <button class="filter-btn" data-filter="medium">
+              <span class="dot dot-medium"></span> Medium
+            </button>
+            <button class="filter-btn" data-filter="high">
+              <span class="dot dot-high"></span> High
+            </button>
+            <button class="filter-btn" data-filter="critical">
+              <span class="dot dot-critical"></span> Critical
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-section hidden" id="category-filter-group">
+          <h2 class="sidebar-heading">Categories</h2>
+          <div class="sidebar-filters" id="category-filters"></div>
+        </div>
+      </nav>
+    </aside>
+
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
     <main class="main">
-      <section class="panel create-section">
-        <h2 class="panel-title">New Task</h2>
-        <form id="task-form" class="task-form">
-          <div class="form-grid">
-            <div class="field field-wide">
-              <label class="field-label" for="task-title">Title</label>
+      <header class="main-header">
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M2 4h16v1.5H2V4zm0 5.25h16v1.5H2V9.25zm0 5.25h16V16H2v-1.5z"/>
+          </svg>
+        </button>
+        <div class="main-header-text">
+          <h2 class="main-title">Tasks</h2>
+          <p class="task-count" id="task-count">0 shown</p>
+        </div>
+      </header>
+
+      <div class="main-body">
+        <section class="create-section">
+          <form id="task-form" class="task-form">
+            <div class="form-row-primary">
               <input
                 type="text"
                 id="task-title"
-                class="input"
+                class="input input-title"
                 placeholder="What needs to be done?"
                 required
                 autocomplete="off"
               />
+              <button type="submit" class="btn btn-primary">Add Task</button>
             </div>
-            <div class="field">
-              <label class="field-label" for="task-importance">Importance</label>
-              <select id="task-importance" class="select">
+            <div class="form-row-secondary">
+              <select id="task-importance" class="select" aria-label="Importance">
                 <option value="low">Low</option>
                 <option value="medium" selected>Medium</option>
                 <option value="high">High</option>
                 <option value="critical">Critical</option>
               </select>
-            </div>
-            <div class="field">
-              <label class="field-label" for="task-due-date">Due date</label>
-              <input type="date" id="task-due-date" class="input input-date" />
-            </div>
-            <div class="field">
-              <label class="field-label" for="task-category">Category</label>
+              <input type="date" id="task-due-date" class="input input-date" aria-label="Due date" />
               <input
                 type="text"
                 id="task-category"
                 class="input"
-                placeholder="Work, Personal…"
+                placeholder="Category"
                 list="category-suggestions"
                 autocomplete="off"
               />
               <datalist id="category-suggestions"></datalist>
-            </div>
-            <div class="field field-wide">
-              <label class="field-label" for="task-description">Details <span class="optional">optional</span></label>
-              <textarea
+              <input
+                type="text"
                 id="task-description"
-                class="textarea"
-                placeholder="Add any extra context…"
-                rows="2"
-              ></textarea>
+                class="input"
+                placeholder="Details (optional)"
+                autocomplete="off"
+              />
             </div>
-          </div>
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Add Task</button>
-          </div>
-        </form>
-      </section>
+          </form>
+        </section>
 
-      <section class="panel filters-section">
-        <div class="filters-header">
-          <h2 class="panel-title">Filters</h2>
-          <p class="task-count" id="task-count">0 tasks</p>
-        </div>
-
-        <div class="filter-rows">
-          <div class="filter-row">
-            <span class="filter-label">Status</span>
-            <div class="filters" id="status-filters">
-              <button class="filter-btn active" data-filter="all">All</button>
-              <button class="filter-btn" data-filter="active">Active</button>
-              <button class="filter-btn" data-filter="completed">Completed</button>
-              <button class="filter-btn" data-filter="bookmarked">Bookmarked</button>
-            </div>
+        <section class="tasks-section">
+          <ul id="task-list" class="task-list"></ul>
+          <div id="empty-state" class="empty-state">
+            <div class="empty-icon">📋</div>
+            <p class="empty-title">No tasks yet</p>
+            <p class="empty-subtitle">Create your first task above to get started</p>
           </div>
-          <div class="filter-row">
-            <span class="filter-label">Importance</span>
-            <div class="filters" id="importance-filters">
-              <button class="filter-btn" data-filter="low">Low</button>
-              <button class="filter-btn" data-filter="medium">Medium</button>
-              <button class="filter-btn" data-filter="high">High</button>
-              <button class="filter-btn" data-filter="critical">Critical</button>
-            </div>
-          </div>
-          <div class="filter-row hidden" id="category-filter-group">
-            <span class="filter-label">Category</span>
-            <div class="filters" id="category-filters"></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="tasks-section">
-        <ul id="task-list" class="task-list"></ul>
-        <div id="empty-state" class="empty-state panel">
-          <div class="empty-icon">📋</div>
-          <p class="empty-title">No tasks yet</p>
-          <p class="empty-subtitle">Create your first task above to get started</p>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
   </div>
 
