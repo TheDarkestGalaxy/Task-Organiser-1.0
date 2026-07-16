@@ -10,6 +10,8 @@ let dailyItems = loadDailyItems();
 let dailyLog = loadDailyLog();
 let activeFilter = "all";
 let activeView = "tasks";
+let calendarMonth = startOfMonth(new Date());
+let selectedCalDate = getTodayKey();
 
 const form = document.getElementById("task-form");
 const titleInput = document.getElementById("task-title");
@@ -32,6 +34,7 @@ const categoryFilterGroup = document.getElementById("category-filter-group");
 const taskFilters = document.getElementById("task-filters");
 const viewTasks = document.getElementById("view-tasks");
 const viewDaily = document.getElementById("view-daily");
+const viewCalendar = document.getElementById("view-calendar");
 
 const dailyForm = document.getElementById("daily-form");
 const dailyTitleInput = document.getElementById("daily-title");
@@ -40,6 +43,30 @@ const dailyEmpty = document.getElementById("daily-empty");
 const dailyDateLabel = document.getElementById("daily-date-label");
 const dailyProgressText = document.getElementById("daily-progress-text");
 const dailyProgressFill = document.getElementById("daily-progress-fill");
+
+const calendarGrid = document.getElementById("calendar-grid");
+const calendarMonthLabel = document.getElementById("calendar-month-label");
+const calendarDayTitle = document.getElementById("calendar-day-title");
+const calendarDayList = document.getElementById("calendar-day-list");
+const calendarDayEmpty = document.getElementById("calendar-day-empty");
+const calendarSubtitle = document.getElementById("calendar-subtitle");
+
+document.getElementById("cal-prev").addEventListener("click", () => {
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
+  renderCalendar();
+});
+
+document.getElementById("cal-next").addEventListener("click", () => {
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
+  renderCalendar();
+});
+
+document.getElementById("cal-today").addEventListener("click", () => {
+  const now = new Date();
+  calendarMonth = startOfMonth(now);
+  selectedCalDate = getTodayKey();
+  renderCalendar();
+});
 
 document.querySelectorAll(".view-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -114,22 +141,30 @@ function handleFilterClick(e) {
 
 function switchView() {
   const isTasks = activeView === "tasks";
+  const isDaily = activeView === "daily";
+  const isCalendar = activeView === "calendar";
 
   viewTasks.classList.toggle("hidden", !isTasks);
-  viewDaily.classList.toggle("hidden", isTasks);
+  viewDaily.classList.toggle("hidden", !isDaily);
+  viewCalendar.classList.toggle("hidden", !isCalendar);
   taskFilters.classList.toggle("hidden", !isTasks);
 
   if (isTasks) {
-    statLabels[0].textContent = "Active";
-    statLabels[1].textContent = "Overdue";
-    statLabels[2].textContent = "Done";
+    setStatLabels("Active", "Overdue", "Done");
     renderTasks();
-  } else {
-    statLabels[0].textContent = "Today";
-    statLabels[1].textContent = "Left";
-    statLabels[2].textContent = "Habits";
+  } else if (isDaily) {
+    setStatLabels("Today", "Left", "Habits");
     renderDaily();
+  } else {
+    setStatLabels("Month", "Day", "Due");
+    renderCalendar();
   }
+}
+
+function setStatLabels(a, b, c) {
+  statLabels[0].textContent = a;
+  statLabels[1].textContent = b;
+  statLabels[2].textContent = c;
 }
 
 function getTodayKey() {
@@ -303,6 +338,10 @@ function startOfDay(date) {
   return d;
 }
 
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
 function formatDateTime(iso) {
   return new Date(iso).toLocaleDateString(undefined, {
     month: "short",
@@ -374,8 +413,10 @@ function categoryFilterKey(cat) {
 function render() {
   if (activeView === "tasks") {
     renderTasks();
-  } else {
+  } else if (activeView === "daily") {
     renderDaily();
+  } else {
+    renderCalendar();
   }
 }
 
@@ -438,6 +479,174 @@ function renderDaily() {
 
   dailyList.innerHTML = sorted.map(renderDailyCard).join("");
   bindDailyEvents();
+}
+
+function getTasksByDueDate() {
+  const map = {};
+  tasks.forEach((task) => {
+    if (!task.dueDate) return;
+    if (!map[task.dueDate]) map[task.dueDate] = [];
+    map[task.dueDate].push(task);
+  });
+  Object.keys(map).forEach((key) => {
+    map[key].sort((a, b) => {
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      return IMPORTANCE_ORDER[a.importance] - IMPORTANCE_ORDER[b.importance];
+    });
+  });
+  return map;
+}
+
+function renderCalendar() {
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+  const todayKey = getTodayKey();
+  const byDate = getTasksByDueDate();
+
+  calendarMonthLabel.textContent = calendarMonth.toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+
+  // Monday-first calendar grid
+  const firstDay = new Date(year, month, 1);
+  let startWeekday = firstDay.getDay(); // 0 Sun .. 6 Sat
+  startWeekday = startWeekday === 0 ? 6 : startWeekday - 1;
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevMonthDays = new Date(year, month, 0).getDate();
+
+  const cells = [];
+
+  for (let i = startWeekday - 1; i >= 0; i--) {
+    const day = prevMonthDays - i;
+    const date = new Date(year, month - 1, day);
+    cells.push({ date, other: true });
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push({ date: new Date(year, month, day), other: false });
+  }
+
+  while (cells.length % 7 !== 0) {
+    const day = cells.length - (startWeekday + daysInMonth) + 1;
+    cells.push({ date: new Date(year, month + 1, day), other: true });
+  }
+
+  const monthTaskCount = tasks.filter((t) => {
+    if (!t.dueDate) return false;
+    const d = new Date(t.dueDate + "T00:00:00");
+    return d.getFullYear() === year && d.getMonth() === month;
+  }).length;
+
+  const selectedTasks = byDate[selectedCalDate] || [];
+
+  statActive.textContent = monthTaskCount;
+  statOverdue.textContent = selectedTasks.length;
+  statDone.textContent = tasks.filter((t) => t.dueDate).length;
+  calendarSubtitle.textContent = `${monthTaskCount} task${monthTaskCount !== 1 ? "s" : ""} this month`;
+
+  calendarGrid.innerHTML = cells
+    .map(({ date, other }) => {
+      const key = formatDateKey(date);
+      const dayTasks = byDate[key] || [];
+      const visible = dayTasks.slice(0, 3);
+      const extra = dayTasks.length - visible.length;
+      const classes = [
+        "cal-day",
+        other ? "other-month" : "",
+        key === todayKey ? "today" : "",
+        key === selectedCalDate ? "selected" : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      return `
+        <button type="button" class="${classes}" data-date="${key}">
+          <span class="cal-day-num">${date.getDate()}</span>
+          <div class="cal-day-tasks">
+            ${visible
+              .map(
+                (t) =>
+                  `<span class="cal-chip ${t.importance}${t.completed ? " completed" : ""}">${escapeHtml(t.title)}</span>`
+              )
+              .join("")}
+            ${extra > 0 ? `<span class="cal-more">+${extra} more</span>` : ""}
+          </div>
+        </button>
+      `;
+    })
+    .join("");
+
+  calendarGrid.querySelectorAll(".cal-day").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedCalDate = btn.dataset.date;
+      renderCalendar();
+    });
+  });
+
+  renderCalendarDayPanel(selectedCalDate, selectedTasks);
+}
+
+function renderCalendarDayPanel(dateKey, dayTasks) {
+  const date = new Date(dateKey + "T00:00:00");
+  calendarDayTitle.textContent = date.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+
+  if (dayTasks.length === 0) {
+    calendarDayList.classList.add("hidden");
+    calendarDayEmpty.classList.remove("hidden");
+    calendarDayList.innerHTML = "";
+    return;
+  }
+
+  calendarDayList.classList.remove("hidden");
+  calendarDayEmpty.classList.add("hidden");
+  calendarDayList.innerHTML = dayTasks.map(renderCalendarTaskCard).join("");
+
+  calendarDayList.querySelectorAll(".complete-checkbox").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      const id = checkbox.closest(".task-card").dataset.id;
+      const task = tasks.find((t) => t.id === id);
+      if (task) {
+        task.completed = checkbox.checked;
+        task.completedAt = checkbox.checked ? new Date().toISOString() : null;
+        saveTasks();
+        renderCalendar();
+      }
+    });
+  });
+}
+
+function renderCalendarTaskCard(task) {
+  const dueStatus = getDueDateStatus(task);
+  const cardClasses = [
+    "task-card",
+    task.completed ? "completed" : "",
+    dueStatus,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return `
+    <li class="${cardClasses}" data-id="${task.id}">
+      <label class="checkbox-wrapper" title="${task.completed ? "Mark incomplete" : "Mark complete"}">
+        <input type="checkbox" class="complete-checkbox" ${task.completed ? "checked" : ""} aria-label="Mark task complete" />
+        <span class="checkbox-custom"></span>
+      </label>
+      <div class="task-body">
+        <div class="task-header">
+          <span class="task-title">${escapeHtml(task.title)}</span>
+          <span class="importance-badge ${task.importance}">${task.importance}</span>
+          ${task.category ? `<span class="category-badge">${escapeHtml(task.category)}</span>` : ""}
+        </div>
+        ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ""}
+      </div>
+    </li>
+  `;
 }
 
 function bindTaskEvents() {

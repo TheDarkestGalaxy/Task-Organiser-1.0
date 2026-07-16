@@ -42,6 +42,7 @@
             <div class="nav-list">
               <button class="nav-btn view-btn active" data-view="tasks">My Tasks</button>
               <button class="nav-btn view-btn" data-view="daily">Daily Tracker</button>
+              <button class="nav-btn view-btn" data-view="calendar">Calendar</button>
             </div>
           </div>
 
@@ -126,7 +127,10 @@
                 <datalist id="category-suggestions"></datalist>
               </div>
               <div class="field field-span-2">
-                <label class="field-label" for="task-description">Details <span class="optional">optional</span></label>
+                <label class="field-label" for="task-description">
+                  <span>Details</span>
+                  <span class="optional">Optional</span>
+                </label>
                 <textarea
                   id="task-description"
                   class="textarea"
@@ -189,6 +193,46 @@
               <p class="empty-subtitle">Add routines you want to do every day</p>
             </div>
           </section>
+        </div>
+      </div>
+
+      <div id="view-calendar" class="view hidden">
+        <header class="content-header">
+          <div>
+            <h2 class="page-title">Calendar</h2>
+            <p class="task-count" id="calendar-subtitle">Tasks by due date</p>
+          </div>
+          <div class="calendar-nav">
+            <button type="button" class="btn btn-ghost" id="cal-prev" aria-label="Previous month">‹</button>
+            <span class="calendar-month-label" id="calendar-month-label"></span>
+            <button type="button" class="btn btn-ghost" id="cal-next" aria-label="Next month">›</button>
+            <button type="button" class="btn btn-ghost" id="cal-today">Today</button>
+          </div>
+        </header>
+
+        <div class="content-body">
+          <div class="calendar-layout">
+            <section class="card calendar-card">
+              <div class="calendar-weekdays">
+                <span>Mon</span>
+                <span>Tue</span>
+                <span>Wed</span>
+                <span>Thu</span>
+                <span>Fri</span>
+                <span>Sat</span>
+                <span>Sun</span>
+              </div>
+              <div class="calendar-grid" id="calendar-grid"></div>
+            </section>
+
+            <section class="card calendar-day-panel">
+              <h3 class="card-title" id="calendar-day-title">Select a day</h3>
+              <ul id="calendar-day-list" class="task-list calendar-day-list"></ul>
+              <div id="calendar-day-empty" class="calendar-day-empty">
+                No tasks due on this day
+              </div>
+            </section>
+          </div>
         </div>
       </div>
     </main>
