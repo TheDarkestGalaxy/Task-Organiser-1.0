@@ -148,6 +148,10 @@ body {
   margin-bottom: 1.25rem;
 }
 
+#task-filters.hidden {
+  display: none;
+}
+
 .nav-group.hidden {
   display: none;
 }
@@ -223,11 +227,27 @@ body {
   background: var(--bg);
 }
 
+.view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.view.hidden {
+  display: none;
+}
+
 .content-header {
   flex-shrink: 0;
   padding: 1.25rem 2rem;
   border-bottom: 1px solid var(--sidebar-border);
   background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .page-title {
@@ -555,6 +575,63 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .empty-title { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.3rem; }
 .empty-subtitle { font-size: 0.88rem; color: var(--text-faint); }
 
+/* Daily tracker */
+.daily-progress-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--low);
+  white-space: nowrap;
+}
+
+.daily-progress-bar {
+  height: 6px;
+  background: var(--surface);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+  border: 1px solid var(--sidebar-border);
+}
+
+.daily-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--low), #3db87a);
+  border-radius: 999px;
+  width: 0%;
+  transition: width 0.3s ease;
+}
+
+.daily-form {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.daily-form .input {
+  flex: 1;
+}
+
+.daily-form .btn {
+  flex-shrink: 0;
+}
+
+.daily-card {
+  opacity: 1;
+}
+
+.daily-card.done {
+  opacity: 0.55;
+}
+
+.daily-card.done .task-title {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.daily-streak {
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  margin-top: 0.35rem;
+}
+
 /* Small screens: sidebar stacks on top, still always visible */
 @media (max-width: 768px) {
   body { overflow: auto; }
@@ -606,6 +683,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
   .content-body {
     padding: 1rem 1.25rem 2rem;
+  }
+
+  .daily-form {
+    flex-direction: column;
   }
 
   .form-grid {

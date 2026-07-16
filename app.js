@@ -1,10 +1,15 @@
 const STORAGE_KEY = "task-organiser-tasks";
+const DAILY_ITEMS_KEY = "task-organiser-daily-items";
+const DAILY_LOG_KEY = "task-organiser-daily-log";
 
 const IMPORTANCE_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const IMPORTANCE_FILTERS = new Set(["low", "medium", "high", "critical"]);
 
 let tasks = loadTasks();
+let dailyItems = loadDailyItems();
+let dailyLog = loadDailyLog();
 let activeFilter = "all";
+let activeView = "tasks";
 
 const form = document.getElementById("task-form");
 const titleInput = document.getElementById("task-title");
@@ -19,10 +24,31 @@ const taskCount = document.getElementById("task-count");
 const statActive = document.getElementById("stat-active");
 const statOverdue = document.getElementById("stat-overdue");
 const statDone = document.getElementById("stat-done");
+const statLabels = document.querySelectorAll(".stat-label");
 const statusFilters = document.getElementById("status-filters");
 const importanceFilters = document.getElementById("importance-filters");
 const categoryFilters = document.getElementById("category-filters");
 const categoryFilterGroup = document.getElementById("category-filter-group");
+const taskFilters = document.getElementById("task-filters");
+const viewTasks = document.getElementById("view-tasks");
+const viewDaily = document.getElementById("view-daily");
+
+const dailyForm = document.getElementById("daily-form");
+const dailyTitleInput = document.getElementById("daily-title");
+const dailyList = document.getElementById("daily-list");
+const dailyEmpty = document.getElementById("daily-empty");
+const dailyDateLabel = document.getElementById("daily-date-label");
+const dailyProgressText = document.getElementById("daily-progress-text");
+const dailyProgressFill = document.getElementById("daily-progress-fill");
+
+document.querySelectorAll(".view-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".view-btn").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    activeView = btn.dataset.view;
+    switchView();
+  });
+});
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -51,18 +77,115 @@ form.addEventListener("submit", (e) => {
   titleInput.focus();
 });
 
+dailyForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  const title = dailyTitleInput.value.trim();
+  if (!title) return;
+
+  dailyItems.push({
+    id: crypto.randomUUID(),
+    title,
+    createdAt: new Date().toISOString(),
+  });
+
+  saveDailyItems();
+  renderDaily();
+
+  dailyForm.reset();
+  dailyTitleInput.focus();
+});
+
 statusFilters.addEventListener("click", handleFilterClick);
 importanceFilters.addEventListener("click", handleFilterClick);
 categoryFilters.addEventListener("click", handleFilterClick);
 
 function handleFilterClick(e) {
+  if (activeView !== "tasks") return;
   const btn = e.target.closest(".nav-btn, .filter-btn");
-  if (!btn) return;
+  if (!btn || btn.classList.contains("view-btn")) return;
 
-  document.querySelectorAll(".nav-btn, .filter-btn").forEach((b) => b.classList.remove("active"));
+  document.querySelectorAll("#task-filters .nav-btn, #task-filters .filter-btn").forEach((b) =>
+    b.classList.remove("active")
+  );
   btn.classList.add("active");
   activeFilter = btn.dataset.filter;
-  render();
+  renderTasks();
+}
+
+function switchView() {
+  const isTasks = activeView === "tasks";
+
+  viewTasks.classList.toggle("hidden", !isTasks);
+  viewDaily.classList.toggle("hidden", isTasks);
+  taskFilters.classList.toggle("hidden", !isTasks);
+
+  if (isTasks) {
+    statLabels[0].textContent = "Active";
+    statLabels[1].textContent = "Overdue";
+    statLabels[2].textContent = "Done";
+    renderTasks();
+  } else {
+    statLabels[0].textContent = "Done today";
+    statLabels[1].textContent = "Remaining";
+    statLabels[2].textContent = "Habits";
+    renderDaily();
+  }
+}
+
+function getTodayKey() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function getTodayCompletions() {
+  const today = getTodayKey();
+  if (!dailyLog[today]) dailyLog[today] = [];
+  return dailyLog[today];
+}
+
+function isDoneToday(id) {
+  return getTodayCompletions().includes(id);
+}
+
+function toggleDailyCompletion(id) {
+  const today = getTodayKey();
+  if (!dailyLog[today]) dailyLog[today] = [];
+
+  const idx = dailyLog[today].indexOf(id);
+  if (idx === -1) {
+    dailyLog[today].push(id);
+  } else {
+    dailyLog[today].splice(idx, 1);
+  }
+
+  saveDailyLog();
+}
+
+function getStreak(id) {
+  let streak = 0;
+  const d = startOfDay(new Date());
+
+  while (true) {
+    const key = formatDateKey(d);
+    if (dailyLog[key] && dailyLog[key].includes(id)) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
+
+function formatDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function loadTasks() {
@@ -83,6 +206,32 @@ function loadTasks() {
 
 function saveTasks() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+function loadDailyItems() {
+  try {
+    const stored = localStorage.getItem(DAILY_ITEMS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDailyItems() {
+  localStorage.setItem(DAILY_ITEMS_KEY, JSON.stringify(dailyItems));
+}
+
+function loadDailyLog() {
+  try {
+    const stored = localStorage.getItem(DAILY_LOG_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveDailyLog() {
+  localStorage.setItem(DAILY_LOG_KEY, JSON.stringify(dailyLog));
 }
 
 function getCategories() {
@@ -139,6 +288,15 @@ function sortTasks(list) {
   });
 }
 
+function sortDailyItems(list) {
+  return [...list].sort((a, b) => {
+    const aDone = isDoneToday(a.id);
+    const bDone = isDoneToday(b.id);
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    return new Date(a.createdAt) - new Date(b.createdAt);
+  });
+}
+
 function startOfDay(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -166,6 +324,14 @@ function formatDueDate(dateStr) {
   return "Due " + due.toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
+    day: "numeric",
+  });
+}
+
+function formatTodayLabel() {
+  return new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
     day: "numeric",
   });
 }
@@ -206,6 +372,14 @@ function categoryFilterKey(cat) {
 }
 
 function render() {
+  if (activeView === "tasks") {
+    renderTasks();
+  } else {
+    renderDaily();
+  }
+}
+
+function renderTasks() {
   renderCategoryFilters();
   renderCategorySuggestions();
 
@@ -235,7 +409,38 @@ function render() {
   emptyState.classList.add("hidden");
 
   taskList.innerHTML = filtered.map(renderTaskCard).join("");
+  bindTaskEvents();
+}
 
+function renderDaily() {
+  const sorted = sortDailyItems(dailyItems);
+  const doneToday = dailyItems.filter((item) => isDoneToday(item.id)).length;
+  const total = dailyItems.length;
+  const remaining = total - doneToday;
+  const pct = total > 0 ? Math.round((doneToday / total) * 100) : 0;
+
+  dailyDateLabel.textContent = formatTodayLabel();
+  dailyProgressText.textContent = `${doneToday} of ${total} done`;
+  dailyProgressFill.style.width = `${pct}%`;
+
+  statActive.textContent = doneToday;
+  statOverdue.textContent = remaining;
+  statDone.textContent = total;
+
+  if (sorted.length === 0) {
+    dailyList.classList.add("hidden");
+    dailyEmpty.classList.remove("hidden");
+    return;
+  }
+
+  dailyList.classList.remove("hidden");
+  dailyEmpty.classList.add("hidden");
+
+  dailyList.innerHTML = sorted.map(renderDailyCard).join("");
+  bindDailyEvents();
+}
+
+function bindTaskEvents() {
   taskList.querySelectorAll(".complete-checkbox").forEach((checkbox) => {
     checkbox.addEventListener("change", () => {
       const id = checkbox.closest(".task-card").dataset.id;
@@ -244,7 +449,7 @@ function render() {
         task.completed = checkbox.checked;
         task.completedAt = checkbox.checked ? new Date().toISOString() : null;
         saveTasks();
-        render();
+        renderTasks();
       }
     });
   });
@@ -256,7 +461,7 @@ function render() {
       if (task) {
         task.bookmarked = !task.bookmarked;
         saveTasks();
-        render();
+        renderTasks();
       }
     });
   });
@@ -266,7 +471,30 @@ function render() {
       const id = btn.closest(".task-card").dataset.id;
       tasks = tasks.filter((t) => t.id !== id);
       saveTasks();
-      render();
+      renderTasks();
+    });
+  });
+}
+
+function bindDailyEvents() {
+  dailyList.querySelectorAll(".daily-checkbox").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      const id = checkbox.closest(".task-card").dataset.id;
+      toggleDailyCompletion(id);
+      renderDaily();
+    });
+  });
+
+  dailyList.querySelectorAll(".delete-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.closest(".task-card").dataset.id;
+      dailyItems = dailyItems.filter((item) => item.id !== id);
+      Object.keys(dailyLog).forEach((date) => {
+        dailyLog[date] = dailyLog[date].filter((itemId) => itemId !== id);
+      });
+      saveDailyItems();
+      saveDailyLog();
+      renderDaily();
     });
   });
 }
@@ -306,6 +534,28 @@ function renderTaskCard(task) {
           ${task.bookmarked ? "★" : "☆"}
         </button>
         <button class="icon-btn delete-btn delete" title="Delete task" aria-label="Delete task">✕</button>
+      </div>
+    </li>
+  `;
+}
+
+function renderDailyCard(item) {
+  const done = isDoneToday(item.id);
+  const streak = getStreak(item.id);
+  const cardClasses = ["task-card", "daily-card", done ? "done" : ""].filter(Boolean).join(" ");
+
+  return `
+    <li class="${cardClasses}" data-id="${item.id}">
+      <label class="checkbox-wrapper" title="${done ? "Mark not done today" : "Mark done for today"}">
+        <input type="checkbox" class="complete-checkbox daily-checkbox" ${done ? "checked" : ""} aria-label="Mark done for today" />
+        <span class="checkbox-custom"></span>
+      </label>
+      <div class="task-body">
+        <span class="task-title">${escapeHtml(item.title)}</span>
+        ${streak > 0 ? `<p class="daily-streak">🔥 ${streak} day streak</p>` : ""}
+      </div>
+      <div class="task-actions">
+        <button class="icon-btn delete-btn delete" title="Remove habit" aria-label="Remove habit">✕</button>
       </div>
     </li>
   `;

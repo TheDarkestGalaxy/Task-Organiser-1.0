@@ -38,6 +38,15 @@
 
         <nav class="sidebar-nav">
           <div class="nav-group">
+            <h2 class="nav-heading">Views</h2>
+            <div class="nav-list">
+              <button class="nav-btn view-btn active" data-view="tasks">My Tasks</button>
+              <button class="nav-btn view-btn" data-view="daily">Daily Tracker</button>
+            </div>
+          </div>
+
+          <div id="task-filters">
+          <div class="nav-group">
             <h2 class="nav-heading">Status</h2>
             <div class="nav-list" id="status-filters">
               <button class="nav-btn active" data-filter="all">All tasks</button>
@@ -61,11 +70,13 @@
             <h2 class="nav-heading">Categories</h2>
             <div class="nav-list" id="category-filters"></div>
           </div>
+          </div>
         </nav>
       </div>
     </aside>
 
     <main class="content">
+      <div id="view-tasks" class="view">
       <header class="content-header">
         <div>
           <h2 class="page-title">My Tasks</h2>
@@ -138,6 +149,47 @@
             <p class="empty-subtitle">Create your first task above to get started</p>
           </div>
         </section>
+      </div>
+      </div>
+
+      <div id="view-daily" class="view hidden">
+        <header class="content-header">
+          <div>
+            <h2 class="page-title">Daily Tracker</h2>
+            <p class="task-count" id="daily-date-label"></p>
+          </div>
+          <div class="daily-progress-text" id="daily-progress-text">0 of 0 done</div>
+        </header>
+
+        <div class="content-body">
+          <div class="daily-progress-bar">
+            <div class="daily-progress-fill" id="daily-progress-fill"></div>
+          </div>
+
+          <section class="card create-card">
+            <h3 class="card-title">Add Daily Habit</h3>
+            <form id="daily-form" class="daily-form">
+              <input
+                type="text"
+                id="daily-title"
+                class="input"
+                placeholder="e.g. Drink 2L water, Exercise, Read 30 mins"
+                required
+                autocomplete="off"
+              />
+              <button type="submit" class="btn btn-primary">Add</button>
+            </form>
+          </section>
+
+          <section class="tasks-area">
+            <ul id="daily-list" class="task-list daily-list"></ul>
+            <div id="daily-empty" class="empty-state card">
+              <div class="empty-icon">🔄</div>
+              <p class="empty-title">No daily habits yet</p>
+              <p class="empty-subtitle">Add routines you want to do every day</p>
+            </div>
+          </section>
+        </div>
       </div>
     </main>
   </div>
