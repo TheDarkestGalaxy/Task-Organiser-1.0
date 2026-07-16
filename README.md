@@ -10,7 +10,7 @@ A simple, local task organiser to help you stay on top of what matters.
 - **Mark complete** with checkboxes — completed tasks move to the bottom
 - **Due dates** — overdue and due-today tasks are highlighted
 - **Categories** — organise tasks (e.g. Work, Personal) with filter pills
-- **Daily Tracker** — habits that reset each day with streaks
+- **Daily Tracker** — recurring habits (every day, weekdays, weekends, or custom days) with streaks
 - **Calendar** — month view of tasks by due date
 - **Study Chat** — AI tutor for schoolwork (Google Gemini, free API key)
 - **Auto-saves** to your browser (localStorage)

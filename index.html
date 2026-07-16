@@ -172,17 +172,34 @@
           </div>
 
           <section class="card create-card">
-            <h3 class="card-title">Add Daily Habit</h3>
+            <h3 class="card-title">Add Habit</h3>
             <form id="daily-form" class="daily-form">
-              <input
-                type="text"
-                id="daily-title"
-                class="input"
-                placeholder="e.g. Drink 2L water, Exercise, Read 30 mins"
-                required
-                autocomplete="off"
-              />
-              <button type="submit" class="btn btn-primary">Add</button>
+              <div class="daily-form-main">
+                <input
+                  type="text"
+                  id="daily-title"
+                  class="input"
+                  placeholder="e.g. Drink 2L water, Exercise, Read 30 mins"
+                  required
+                  autocomplete="off"
+                />
+                <select id="daily-repeat" class="select" aria-label="Repeat schedule">
+                  <option value="everyday" selected>Every day</option>
+                  <option value="weekdays">Weekdays</option>
+                  <option value="weekends">Weekends</option>
+                  <option value="custom">Custom days</option>
+                </select>
+                <button type="submit" class="btn btn-primary">Add</button>
+              </div>
+              <div id="daily-custom-days" class="daily-custom-days hidden">
+                <label class="day-chip"><input type="checkbox" value="1" /> Mon</label>
+                <label class="day-chip"><input type="checkbox" value="2" /> Tue</label>
+                <label class="day-chip"><input type="checkbox" value="3" /> Wed</label>
+                <label class="day-chip"><input type="checkbox" value="4" /> Thu</label>
+                <label class="day-chip"><input type="checkbox" value="5" /> Fri</label>
+                <label class="day-chip"><input type="checkbox" value="6" /> Sat</label>
+                <label class="day-chip"><input type="checkbox" value="0" /> Sun</label>
+              </div>
             </form>
           </section>
 
@@ -190,8 +207,8 @@
             <ul id="daily-list" class="task-list daily-list"></ul>
             <div id="daily-empty" class="empty-state card">
               <div class="empty-icon">🔄</div>
-              <p class="empty-title">No daily habits yet</p>
-              <p class="empty-subtitle">Add routines you want to do every day</p>
+              <p class="empty-title">No habits yet</p>
+              <p class="empty-subtitle">Add routines and choose weekdays, weekends, or custom days</p>
             </div>
           </section>
         </div>

@@ -798,19 +798,74 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .daily-form {
   display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.daily-form-main {
+  display: flex;
   gap: 0.6rem;
+  flex-wrap: wrap;
 }
 
-.daily-form .input {
+.daily-form-main .input {
   flex: 1;
+  min-width: 180px;
 }
 
-.daily-form .btn {
+.daily-form-main .select {
+  width: auto;
+  min-width: 140px;
   flex-shrink: 0;
 }
 
-.daily-card {
-  opacity: 1;
+.daily-form-main .btn {
+  flex-shrink: 0;
+}
+
+.daily-custom-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.daily-custom-days.hidden {
+  display: none;
+}
+
+.day-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.day-chip:has(input:checked) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.day-chip input {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+.schedule-badge {
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(146, 153, 176, 0.12);
+  color: var(--text-muted);
 }
 
 .daily-card.done {
@@ -822,9 +877,26 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--text-muted);
 }
 
+.daily-card.not-due {
+  opacity: 0.4;
+}
+
+.daily-card.not-due .checkbox-wrapper {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
 .daily-streak {
   font-size: 0.72rem;
   color: var(--text-faint);
+  margin-top: 0.35rem;
+}
+
+.daily-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
   margin-top: 0.35rem;
 }
 
@@ -1030,8 +1102,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     padding: 1rem 1.25rem 2rem;
   }
 
-  .daily-form {
+  .daily-form-main {
     flex-direction: column;
+  }
+
+  .daily-form-main .select,
+  .daily-form-main .btn {
+    width: 100%;
   }
 
   .form-grid {

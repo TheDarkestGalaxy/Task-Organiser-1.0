@@ -6,6 +6,11 @@ const CHAT_HISTORY_KEY = "task-organiser-study-chat";
 
 const IMPORTANCE_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const IMPORTANCE_FILTERS = new Set(["low", "medium", "high", "critical"]);
+const WEEKDAY_DAYS = [1, 2, 3, 4, 5];
+const WEEKEND_DAYS = [0, 6];
+const EVERYDAY_DAYS = [0, 1, 2, 3, 4, 5, 6];
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const STUDY_SYSTEM_PROMPT = `You are a friendly study tutor helping a student with schoolwork.
 Explain concepts clearly in plain language. Break things into steps.
 When asked for answers to homework, guide them to understand rather than only dumping the final answer — show the method, then the answer.
@@ -48,6 +53,8 @@ const viewStudy = document.getElementById("view-study");
 
 const dailyForm = document.getElementById("daily-form");
 const dailyTitleInput = document.getElementById("daily-title");
+const dailyRepeatSelect = document.getElementById("daily-repeat");
+const dailyCustomDays = document.getElementById("daily-custom-days");
 const dailyList = document.getElementById("daily-list");
 const dailyEmpty = document.getElementById("daily-empty");
 const dailyDateLabel = document.getElementById("daily-date-label");
@@ -208,9 +215,18 @@ dailyForm.addEventListener("submit", (e) => {
   const title = dailyTitleInput.value.trim();
   if (!title) return;
 
+  const repeat = dailyRepeatSelect ? dailyRepeatSelect.value : "everyday";
+  const days = getDaysForRepeat(repeat);
+  if (days.length === 0) {
+    alert("Pick at least one day for a custom schedule.");
+    return;
+  }
+
   dailyItems.push({
     id: crypto.randomUUID(),
     title,
+    repeat,
+    days,
     createdAt: new Date().toISOString(),
   });
 
@@ -218,8 +234,16 @@ dailyForm.addEventListener("submit", (e) => {
   renderDaily();
 
   dailyForm.reset();
+  if (dailyRepeatSelect) dailyRepeatSelect.value = "everyday";
+  if (dailyCustomDays) dailyCustomDays.classList.add("hidden");
   dailyTitleInput.focus();
 });
+
+if (dailyRepeatSelect) {
+  dailyRepeatSelect.addEventListener("change", () => {
+    dailyCustomDays.classList.toggle("hidden", dailyRepeatSelect.value !== "custom");
+  });
+}
 
 statusFilters.addEventListener("click", handleFilterClick);
 importanceFilters.addEventListener("click", handleFilterClick);
@@ -313,10 +337,25 @@ function toggleDailyCompletion(id) {
 }
 
 function getStreak(id) {
+  const item = dailyItems.find((h) => h.id === id);
+  if (!item) return 0;
+
   let streak = 0;
   const d = startOfDay(new Date());
 
-  while (true) {
+  // If today is a scheduled day and not done yet, start counting from yesterday
+  if (isHabitDueOn(item, d) && !isDoneToday(id)) {
+    d.setDate(d.getDate() - 1);
+  }
+
+  let guard = 0;
+  while (guard < 400) {
+    guard++;
+    if (!isHabitDueOn(item, d)) {
+      d.setDate(d.getDate() - 1);
+      continue;
+    }
+
     const key = formatDateKey(d);
     if (dailyLog[key] && dailyLog[key].includes(id)) {
       streak++;
@@ -327,6 +366,22 @@ function getStreak(id) {
   }
 
   return streak;
+}
+
+function sortDailyItems(list) {
+  return [...list].sort((a, b) => {
+    const aDue = isHabitDueToday(a);
+    const bDue = isHabitDueToday(b);
+    if (aDue !== bDue) return aDue ? -1 : 1;
+
+    if (aDue && bDue) {
+      const aDone = isDoneToday(a.id);
+      const bDone = isDoneToday(b.id);
+      if (aDone !== bDone) return aDone ? 1 : -1;
+    }
+
+    return new Date(a.createdAt) - new Date(b.createdAt);
+  });
 }
 
 function formatDateKey(date) {
@@ -359,10 +414,64 @@ function saveTasks() {
 function loadDailyItems() {
   try {
     const stored = localStorage.getItem(DAILY_ITEMS_KEY);
-    return stored ? JSON.parse(stored) : [];
+    if (!stored) return [];
+    return JSON.parse(stored).map(normalizeHabit);
   } catch {
     return [];
   }
+}
+
+function normalizeHabit(item) {
+  const repeat = item.repeat || "everyday";
+  let days = Array.isArray(item.days) ? item.days.map(Number) : null;
+  if (!days || days.length === 0) {
+    if (repeat === "weekdays") days = [...WEEKDAY_DAYS];
+    else if (repeat === "weekends") days = [...WEEKEND_DAYS];
+    else days = [...EVERYDAY_DAYS];
+  }
+  return {
+    ...item,
+    repeat,
+    days,
+  };
+}
+
+function getDaysForRepeat(repeat) {
+  if (repeat === "weekdays") return [...WEEKDAY_DAYS];
+  if (repeat === "weekends") return [...WEEKEND_DAYS];
+  if (repeat === "custom") {
+    if (!dailyCustomDays) return [];
+    return [...dailyCustomDays.querySelectorAll("input:checked")].map((el) => Number(el.value));
+  }
+  return [...EVERYDAY_DAYS];
+}
+
+function isHabitDueOn(item, date = new Date()) {
+  const habit = normalizeHabit(item);
+  return habit.days.includes(date.getDay());
+}
+
+function isHabitDueToday(item) {
+  return isHabitDueOn(item, new Date());
+}
+
+function getHabitsDueToday() {
+  return dailyItems.filter(isHabitDueToday);
+}
+
+function formatScheduleLabel(item) {
+  const habit = normalizeHabit(item);
+  if (habit.repeat === "everyday" || arraysEqual(habit.days, EVERYDAY_DAYS)) return "Every day";
+  if (habit.repeat === "weekdays" || arraysEqual(habit.days, WEEKDAY_DAYS)) return "Weekdays";
+  if (habit.repeat === "weekends" || arraysEqual(habit.days, WEEKEND_DAYS)) return "Weekends";
+  return DAY_ORDER.filter((d) => habit.days.includes(d)).map((d) => DAY_NAMES[d]).join(", ");
+}
+
+function arraysEqual(a, b) {
+  if (a.length !== b.length) return false;
+  const sa = [...a].sort((x, y) => x - y);
+  const sb = [...b].sort((x, y) => x - y);
+  return sa.every((v, i) => v === sb[i]);
 }
 
 function saveDailyItems() {
@@ -612,15 +721,6 @@ function sortTasks(list) {
   });
 }
 
-function sortDailyItems(list) {
-  return [...list].sort((a, b) => {
-    const aDone = isDoneToday(a.id);
-    const bDone = isDoneToday(b.id);
-    if (aDone !== bDone) return aDone ? 1 : -1;
-    return new Date(a.createdAt) - new Date(b.createdAt);
-  });
-}
-
 function startOfDay(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -746,22 +846,27 @@ function renderTasks() {
 
 function renderDaily() {
   const sorted = sortDailyItems(dailyItems);
-  const doneToday = dailyItems.filter((item) => isDoneToday(item.id)).length;
-  const total = dailyItems.length;
+  const dueToday = getHabitsDueToday();
+  const doneToday = dueToday.filter((item) => isDoneToday(item.id)).length;
+  const total = dueToday.length;
   const remaining = total - doneToday;
   const pct = total > 0 ? Math.round((doneToday / total) * 100) : 0;
 
   dailyDateLabel.textContent = formatTodayLabel();
-  dailyProgressText.textContent = `${doneToday} of ${total} done`;
+  dailyProgressText.textContent =
+    total === 0 ? "Nothing scheduled today" : `${doneToday} of ${total} done`;
   dailyProgressFill.style.width = `${pct}%`;
 
   statActive.textContent = doneToday;
   statOverdue.textContent = remaining;
-  statDone.textContent = total;
+  statDone.textContent = dailyItems.length;
 
   if (sorted.length === 0) {
     dailyList.classList.add("hidden");
     dailyEmpty.classList.remove("hidden");
+    dailyEmpty.querySelector(".empty-title").textContent = "No habits yet";
+    dailyEmpty.querySelector(".empty-subtitle").textContent =
+      "Add routines and choose how often they repeat";
     return;
   }
 
@@ -1051,19 +1156,34 @@ function renderTaskCard(task) {
 }
 
 function renderDailyCard(item) {
+  const dueToday = isHabitDueToday(item);
   const done = isDoneToday(item.id);
   const streak = getStreak(item.id);
-  const cardClasses = ["task-card", "daily-card", done ? "done" : ""].filter(Boolean).join(" ");
+  const schedule = formatScheduleLabel(item);
+  const cardClasses = [
+    "task-card",
+    "daily-card",
+    done && dueToday ? "done" : "",
+    !dueToday ? "not-due" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return `
     <li class="${cardClasses}" data-id="${item.id}">
-      <label class="checkbox-wrapper" title="${done ? "Mark not done today" : "Mark done for today"}">
-        <input type="checkbox" class="complete-checkbox daily-checkbox" ${done ? "checked" : ""} aria-label="Mark done for today" />
+      <label class="checkbox-wrapper" title="${!dueToday ? "Not scheduled today" : done ? "Mark not done today" : "Mark done for today"}">
+        <input type="checkbox" class="complete-checkbox daily-checkbox" ${done ? "checked" : ""} ${!dueToday ? "disabled" : ""} aria-label="Mark done for today" />
         <span class="checkbox-custom"></span>
       </label>
       <div class="task-body">
-        <span class="task-title">${escapeHtml(item.title)}</span>
-        ${streak > 0 ? `<p class="daily-streak">🔥 ${streak} day streak</p>` : ""}
+        <div class="task-header">
+          <span class="task-title">${escapeHtml(item.title)}</span>
+          <span class="schedule-badge">${escapeHtml(schedule)}</span>
+        </div>
+        <div class="daily-meta">
+          ${!dueToday ? `<span class="daily-streak">Not scheduled today</span>` : ""}
+          ${streak > 0 ? `<span class="daily-streak">🔥 ${streak} day streak</span>` : ""}
+        </div>
       </div>
       <div class="task-actions">
         <button class="icon-btn delete-btn delete" title="Remove habit" aria-label="Remove habit">✕</button>
