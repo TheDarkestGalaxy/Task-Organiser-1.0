@@ -43,6 +43,7 @@
               <button class="nav-btn view-btn active" data-view="tasks">My Tasks</button>
               <button class="nav-btn view-btn" data-view="daily">Daily Tracker</button>
               <button class="nav-btn view-btn" data-view="calendar">Calendar</button>
+              <button class="nav-btn view-btn" data-view="study">Study Chat</button>
             </div>
           </div>
 
@@ -233,6 +234,62 @@
                 <span class="calendar-hint">Add a due date when creating a task to see it here.</span>
               </div>
             </section>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-study" class="view hidden" data-view-panel="study">
+        <header class="content-header">
+          <div>
+            <h2 class="page-title">Study Chat</h2>
+            <p class="task-count">Ask questions about your schoolwork</p>
+          </div>
+          <div class="study-header-actions">
+            <button type="button" class="btn btn-ghost" id="study-clear">Clear chat</button>
+            <button type="button" class="btn btn-ghost" id="study-settings-btn">API key</button>
+          </div>
+        </header>
+
+        <div class="content-body study-body">
+          <div id="study-setup" class="card study-setup">
+            <h3 class="card-title">Connect a free AI key</h3>
+            <p class="study-setup-text">
+              Study Chat uses Google Gemini (free). Get a key from
+              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">Google AI Studio</a>,
+              then paste it below. It stays in your browser only.
+            </p>
+            <form id="study-key-form" class="study-key-form">
+              <input
+                type="password"
+                id="study-api-key"
+                class="input"
+                placeholder="Paste your Gemini API key"
+                autocomplete="off"
+                required
+              />
+              <button type="submit" class="btn btn-primary">Save key</button>
+              <button type="button" class="btn btn-ghost hidden" id="study-setup-back">Back</button>
+            </form>
+          </div>
+
+          <div id="study-chat" class="study-chat hidden">
+            <div id="chat-messages" class="chat-messages"></div>
+            <form id="chat-form" class="chat-form card">
+              <textarea
+                id="chat-input"
+                class="textarea chat-input"
+                placeholder="Ask about homework, explain a topic, quiz me…"
+                rows="2"
+                required
+              ></textarea>
+              <div class="chat-form-actions">
+                <label class="chat-context-toggle">
+                  <input type="checkbox" id="chat-include-tasks" checked />
+                  Include my active tasks
+                </label>
+                <button type="submit" class="btn btn-primary" id="chat-send">Send</button>
+              </div>
+            </form>
           </div>
         </div>
       </div>

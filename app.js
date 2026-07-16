@@ -1,17 +1,26 @@
 const STORAGE_KEY = "task-organiser-tasks";
 const DAILY_ITEMS_KEY = "task-organiser-daily-items";
 const DAILY_LOG_KEY = "task-organiser-daily-log";
+const GEMINI_KEY_STORAGE = "task-organiser-gemini-key";
+const CHAT_HISTORY_KEY = "task-organiser-study-chat";
 
 const IMPORTANCE_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const IMPORTANCE_FILTERS = new Set(["low", "medium", "high", "critical"]);
+const STUDY_SYSTEM_PROMPT = `You are a friendly study tutor helping a student with schoolwork.
+Explain concepts clearly in plain language. Break things into steps.
+When asked for answers to homework, guide them to understand rather than only dumping the final answer — show the method, then the answer.
+If a question is unclear, ask a short clarifying question.
+Keep replies focused and useful for studying.`;
 
 let tasks = loadTasks();
 let dailyItems = loadDailyItems();
 let dailyLog = loadDailyLog();
+let chatHistory = loadChatHistory();
 let activeFilter = "all";
 let activeView = "tasks";
 let calendarMonth = null;
 let selectedCalDate = null;
+let chatBusy = false;
 
 const form = document.getElementById("task-form");
 const titleInput = document.getElementById("task-title");
@@ -35,6 +44,7 @@ const taskFilters = document.getElementById("task-filters");
 const viewTasks = document.getElementById("view-tasks");
 const viewDaily = document.getElementById("view-daily");
 const viewCalendar = document.getElementById("view-calendar");
+const viewStudy = document.getElementById("view-study");
 
 const dailyForm = document.getElementById("daily-form");
 const dailyTitleInput = document.getElementById("daily-title");
@@ -54,10 +64,24 @@ const calPrev = document.getElementById("cal-prev");
 const calNext = document.getElementById("cal-next");
 const calToday = document.getElementById("cal-today");
 
+const studySetup = document.getElementById("study-setup");
+const studyChat = document.getElementById("study-chat");
+const studyKeyForm = document.getElementById("study-key-form");
+const studyApiKeyInput = document.getElementById("study-api-key");
+const studyClearBtn = document.getElementById("study-clear");
+const studySettingsBtn = document.getElementById("study-settings-btn");
+const studySetupBack = document.getElementById("study-setup-back");
+const chatMessages = document.getElementById("chat-messages");
+const chatForm = document.getElementById("chat-form");
+const chatInput = document.getElementById("chat-input");
+const chatSend = document.getElementById("chat-send");
+const chatIncludeTasks = document.getElementById("chat-include-tasks");
+
 const views = {
   tasks: viewTasks,
   daily: viewDaily,
   calendar: viewCalendar,
+  study: viewStudy,
 };
 
 function ensureCalendarState() {
@@ -101,6 +125,56 @@ document.querySelectorAll(".view-btn").forEach((btn) => {
     switchView();
   });
 });
+
+if (studyKeyForm) {
+  studyKeyForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const key = studyApiKeyInput.value.trim();
+    if (!key) return;
+    localStorage.setItem(GEMINI_KEY_STORAGE, key);
+    studyApiKeyInput.value = "";
+    renderStudy();
+  });
+}
+
+if (studySettingsBtn) {
+  studySettingsBtn.addEventListener("click", () => {
+    studySetup.classList.remove("hidden");
+    studyChat.classList.add("hidden");
+    if (studySetupBack) studySetupBack.classList.toggle("hidden", !getGeminiKey());
+    studyApiKeyInput.focus();
+  });
+}
+
+if (studySetupBack) {
+  studySetupBack.addEventListener("click", () => {
+    renderStudy();
+  });
+}
+
+if (studyClearBtn) {
+  studyClearBtn.addEventListener("click", () => {
+    chatHistory = [];
+    saveChatHistory();
+    renderChatMessages();
+  });
+}
+
+if (chatForm) {
+  chatForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await sendStudyMessage();
+  });
+}
+
+if (chatInput) {
+  chatInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      chatForm.requestSubmit();
+    }
+  });
+}
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -191,6 +265,12 @@ function switchView() {
   if (activeView === "calendar") {
     setStatLabels("Month", "Day", "Due");
     renderCalendar();
+    return;
+  }
+
+  if (activeView === "study") {
+    setStatLabels("Msgs", "Active", "Key");
+    renderStudy();
   }
 }
 
@@ -300,6 +380,182 @@ function loadDailyLog() {
 
 function saveDailyLog() {
   localStorage.setItem(DAILY_LOG_KEY, JSON.stringify(dailyLog));
+}
+
+function loadChatHistory() {
+  try {
+    const stored = localStorage.getItem(CHAT_HISTORY_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveChatHistory() {
+  localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory));
+}
+
+function getGeminiKey() {
+  return localStorage.getItem(GEMINI_KEY_STORAGE) || "";
+}
+
+function renderStudy() {
+  const hasKey = Boolean(getGeminiKey());
+
+  if (studySetup && studyChat) {
+    studySetup.classList.toggle("hidden", hasKey);
+    studyChat.classList.toggle("hidden", !hasKey);
+  }
+
+  const activeCount = tasks.filter((t) => !t.completed).length;
+  statActive.textContent = chatHistory.filter((m) => m.role === "user").length;
+  statOverdue.textContent = activeCount;
+  statDone.textContent = hasKey ? "On" : "Off";
+
+  if (hasKey) renderChatMessages();
+}
+
+function renderChatMessages() {
+  if (!chatMessages) return;
+
+  if (chatHistory.length === 0) {
+    chatMessages.innerHTML = `
+      <div class="chat-welcome">
+        <strong>Ready to study</strong>
+        Ask for explanations, help with homework steps, or a quick quiz on any topic.
+      </div>
+    `;
+    return;
+  }
+
+  chatMessages.innerHTML = chatHistory
+    .map(
+      (msg) =>
+        `<div class="chat-bubble ${msg.role === "user" ? "user" : msg.role === "error" ? "error" : "assistant"}">${escapeHtml(msg.content)}</div>`
+    )
+    .join("");
+
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function buildTaskContext() {
+  const active = tasks.filter((t) => !t.completed).slice(0, 12);
+  if (active.length === 0) return "";
+
+  const lines = active.map((t) => {
+    const bits = [`- ${t.title}`];
+    if (t.category) bits.push(`(${t.category})`);
+    if (t.dueDate) bits.push(`due ${t.dueDate}`);
+    if (t.importance) bits.push(`[${t.importance}]`);
+    if (t.description) bits.push(`— ${t.description}`);
+    return bits.join(" ");
+  });
+
+  return `\n\nStudent's active tasks for context:\n${lines.join("\n")}`;
+}
+
+async function sendStudyMessage() {
+  if (chatBusy || !chatInput) return;
+
+  const text = chatInput.value.trim();
+  if (!text) return;
+
+  const apiKey = getGeminiKey();
+  if (!apiKey) {
+    renderStudy();
+    return;
+  }
+
+  chatHistory.push({ role: "user", content: text });
+  saveChatHistory();
+  chatInput.value = "";
+  renderChatMessages();
+
+  const typing = document.createElement("div");
+  typing.className = "chat-bubble assistant typing";
+  typing.id = "chat-typing";
+  typing.textContent = "Thinking…";
+  chatMessages.appendChild(typing);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  chatBusy = true;
+  if (chatSend) chatSend.disabled = true;
+
+  try {
+    const includeTasks = chatIncludeTasks && chatIncludeTasks.checked;
+    const reply = await askGemini(apiKey, text, includeTasks);
+    chatHistory.push({ role: "assistant", content: reply });
+  } catch (err) {
+    chatHistory.push({
+      role: "error",
+      content: err.message || "Something went wrong talking to the AI.",
+    });
+  }
+
+  saveChatHistory();
+  chatBusy = false;
+  if (chatSend) chatSend.disabled = false;
+  renderChatMessages();
+  renderStudy();
+}
+
+async function askGemini(apiKey, userText, includeTasks) {
+  const recent = chatHistory
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .slice(-10);
+
+  const contents = recent.map((m) => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
+
+  if (!contents.length || contents[contents.length - 1].role !== "user") {
+    contents.push({ role: "user", parts: [{ text: userText }] });
+  }
+
+  let systemText = STUDY_SYSTEM_PROMPT;
+  if (includeTasks) systemText += buildTaskContext();
+
+  const body = {
+    systemInstruction: { parts: [{ text: systemText }] },
+    contents,
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 2048,
+    },
+  };
+
+  const models = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"];
+  let lastError = "Could not reach the AI.";
+
+  for (const model of models) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      lastError =
+        data?.error?.message ||
+        `API error (${res.status}). Check your API key or try again.`;
+      continue;
+    }
+
+    const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") || "";
+    if (!text.trim()) {
+      lastError = "No response from the model. Try again in a moment.";
+      continue;
+    }
+
+    return text.trim();
+  }
+
+  throw new Error(lastError);
 }
 
 function getCategories() {
@@ -448,8 +704,10 @@ function render() {
     renderTasks();
   } else if (activeView === "daily") {
     renderDaily();
-  } else {
+  } else if (activeView === "calendar") {
     renderCalendar();
+  } else if (activeView === "study") {
+    renderStudy();
   }
 }
 
