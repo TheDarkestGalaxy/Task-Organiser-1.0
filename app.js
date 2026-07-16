@@ -125,8 +125,8 @@ function switchView() {
     statLabels[2].textContent = "Done";
     renderTasks();
   } else {
-    statLabels[0].textContent = "Done today";
-    statLabels[1].textContent = "Remaining";
+    statLabels[0].textContent = "Today";
+    statLabels[1].textContent = "Left";
     statLabels[2].textContent = "Habits";
     renderDaily();
   }
