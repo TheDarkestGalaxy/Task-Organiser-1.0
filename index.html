@@ -77,7 +77,7 @@
     </aside>
 
     <main class="content">
-      <div id="view-tasks" class="view">
+      <div id="view-tasks" class="view" data-view-panel="tasks">
       <header class="content-header">
         <div>
           <h2 class="page-title">My Tasks</h2>
@@ -156,7 +156,7 @@
       </div>
       </div>
 
-      <div id="view-daily" class="view hidden">
+      <div id="view-daily" class="view hidden" data-view-panel="daily">
         <header class="content-header">
           <div>
             <h2 class="page-title">Daily Tracker</h2>
@@ -196,7 +196,7 @@
         </div>
       </div>
 
-      <div id="view-calendar" class="view hidden">
+      <div id="view-calendar" class="view hidden" data-view-panel="calendar">
         <header class="content-header">
           <div>
             <h2 class="page-title">Calendar</h2>
@@ -229,7 +229,8 @@
               <h3 class="card-title" id="calendar-day-title">Select a day</h3>
               <ul id="calendar-day-list" class="task-list calendar-day-list"></ul>
               <div id="calendar-day-empty" class="calendar-day-empty">
-                No tasks due on this day
+                No tasks due on this day.<br />
+                <span class="calendar-hint">Add a due date when creating a task to see it here.</span>
               </div>
             </section>
           </div>

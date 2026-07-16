@@ -10,8 +10,8 @@ let dailyItems = loadDailyItems();
 let dailyLog = loadDailyLog();
 let activeFilter = "all";
 let activeView = "tasks";
-let calendarMonth = startOfMonth(new Date());
-let selectedCalDate = getTodayKey();
+let calendarMonth = null;
+let selectedCalDate = null;
 
 const form = document.getElementById("task-form");
 const titleInput = document.getElementById("task-title");
@@ -50,29 +50,54 @@ const calendarDayTitle = document.getElementById("calendar-day-title");
 const calendarDayList = document.getElementById("calendar-day-list");
 const calendarDayEmpty = document.getElementById("calendar-day-empty");
 const calendarSubtitle = document.getElementById("calendar-subtitle");
+const calPrev = document.getElementById("cal-prev");
+const calNext = document.getElementById("cal-next");
+const calToday = document.getElementById("cal-today");
 
-document.getElementById("cal-prev").addEventListener("click", () => {
-  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
-  renderCalendar();
-});
+const views = {
+  tasks: viewTasks,
+  daily: viewDaily,
+  calendar: viewCalendar,
+};
 
-document.getElementById("cal-next").addEventListener("click", () => {
-  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
-  renderCalendar();
-});
+function ensureCalendarState() {
+  if (!calendarMonth) calendarMonth = startOfMonth(new Date());
+  if (!selectedCalDate) selectedCalDate = getTodayKey();
+}
 
-document.getElementById("cal-today").addEventListener("click", () => {
-  const now = new Date();
-  calendarMonth = startOfMonth(now);
-  selectedCalDate = getTodayKey();
-  renderCalendar();
-});
+if (calPrev) {
+  calPrev.addEventListener("click", () => {
+    ensureCalendarState();
+    calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
+    renderCalendar();
+  });
+}
+
+if (calNext) {
+  calNext.addEventListener("click", () => {
+    ensureCalendarState();
+    calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
+    renderCalendar();
+  });
+}
+
+if (calToday) {
+  calToday.addEventListener("click", () => {
+    const now = new Date();
+    calendarMonth = startOfMonth(now);
+    selectedCalDate = getTodayKey();
+    renderCalendar();
+  });
+}
 
 document.querySelectorAll(".view-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
+    const nextView = btn.dataset.view;
+    if (!nextView || !views[nextView]) return;
+
     document.querySelectorAll(".view-btn").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
-    activeView = btn.dataset.view;
+    activeView = nextView;
     switchView();
   });
 });
@@ -140,22 +165,30 @@ function handleFilterClick(e) {
 }
 
 function switchView() {
-  const isTasks = activeView === "tasks";
-  const isDaily = activeView === "daily";
-  const isCalendar = activeView === "calendar";
+  Object.entries(views).forEach(([name, el]) => {
+    if (!el) return;
+    const show = name === activeView;
+    el.classList.toggle("hidden", !show);
+    el.setAttribute("aria-hidden", show ? "false" : "true");
+  });
 
-  viewTasks.classList.toggle("hidden", !isTasks);
-  viewDaily.classList.toggle("hidden", !isDaily);
-  viewCalendar.classList.toggle("hidden", !isCalendar);
-  taskFilters.classList.toggle("hidden", !isTasks);
+  if (taskFilters) {
+    taskFilters.classList.toggle("hidden", activeView !== "tasks");
+  }
 
-  if (isTasks) {
+  if (activeView === "tasks") {
     setStatLabels("Active", "Overdue", "Done");
     renderTasks();
-  } else if (isDaily) {
+    return;
+  }
+
+  if (activeView === "daily") {
     setStatLabels("Today", "Left", "Habits");
     renderDaily();
-  } else {
+    return;
+  }
+
+  if (activeView === "calendar") {
     setStatLabels("Month", "Day", "Due");
     renderCalendar();
   }
@@ -498,6 +531,10 @@ function getTasksByDueDate() {
 }
 
 function renderCalendar() {
+  if (!calendarGrid || !calendarMonthLabel || !viewCalendar) return;
+
+  ensureCalendarState();
+
   const year = calendarMonth.getFullYear();
   const month = calendarMonth.getMonth();
   const todayKey = getTodayKey();
@@ -510,27 +547,24 @@ function renderCalendar() {
 
   // Monday-first calendar grid
   const firstDay = new Date(year, month, 1);
-  let startWeekday = firstDay.getDay(); // 0 Sun .. 6 Sat
+  let startWeekday = firstDay.getDay();
   startWeekday = startWeekday === 0 ? 6 : startWeekday - 1;
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const prevMonthDays = new Date(year, month, 0).getDate();
-
   const cells = [];
 
   for (let i = startWeekday - 1; i >= 0; i--) {
-    const day = prevMonthDays - i;
-    const date = new Date(year, month - 1, day);
-    cells.push({ date, other: true });
+    cells.push({ date: new Date(year, month - 1, prevMonthDays - i), other: true });
   }
 
   for (let day = 1; day <= daysInMonth; day++) {
     cells.push({ date: new Date(year, month, day), other: false });
   }
 
+  let nextDay = 1;
   while (cells.length % 7 !== 0) {
-    const day = cells.length - (startWeekday + daysInMonth) + 1;
-    cells.push({ date: new Date(year, month + 1, day), other: true });
+    cells.push({ date: new Date(year, month + 1, nextDay++), other: true });
   }
 
   const monthTaskCount = tasks.filter((t) => {
@@ -544,7 +578,9 @@ function renderCalendar() {
   statActive.textContent = monthTaskCount;
   statOverdue.textContent = selectedTasks.length;
   statDone.textContent = tasks.filter((t) => t.dueDate).length;
-  calendarSubtitle.textContent = `${monthTaskCount} task${monthTaskCount !== 1 ? "s" : ""} this month`;
+  if (calendarSubtitle) {
+    calendarSubtitle.textContent = `${monthTaskCount} task${monthTaskCount !== 1 ? "s" : ""} due this month`;
+  }
 
   calendarGrid.innerHTML = cells
     .map(({ date, other }) => {
@@ -557,6 +593,7 @@ function renderCalendar() {
         other ? "other-month" : "",
         key === todayKey ? "today" : "",
         key === selectedCalDate ? "selected" : "",
+        dayTasks.length ? "has-tasks" : "",
       ]
         .filter(Boolean)
         .join(" ");
@@ -581,6 +618,13 @@ function renderCalendar() {
   calendarGrid.querySelectorAll(".cal-day").forEach((btn) => {
     btn.addEventListener("click", () => {
       selectedCalDate = btn.dataset.date;
+      const selectedDate = new Date(selectedCalDate + "T00:00:00");
+      if (
+        selectedDate.getMonth() !== calendarMonth.getMonth() ||
+        selectedDate.getFullYear() !== calendarMonth.getFullYear()
+      ) {
+        calendarMonth = startOfMonth(selectedDate);
+      }
       renderCalendar();
     });
   });
