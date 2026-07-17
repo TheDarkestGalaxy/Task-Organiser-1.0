@@ -3,6 +3,12 @@ const DAILY_ITEMS_KEY = "task-organiser-daily-items";
 const DAILY_LOG_KEY = "task-organiser-daily-log";
 const GEMINI_KEY_STORAGE = "task-organiser-gemini-key";
 const CHAT_HISTORY_KEY = "task-organiser-study-chat";
+const CLASSROOM_CLIENT_KEY = "task-organiser-classroom-client-id";
+const CLASSROOM_SYNC_META_KEY = "task-organiser-classroom-sync-meta";
+const CLASSROOM_SCOPES = [
+  "https://www.googleapis.com/auth/classroom.courses.readonly",
+  "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
+].join(" ");
 
 const IMPORTANCE_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 const IMPORTANCE_FILTERS = new Set(["low", "medium", "high", "critical"]);
@@ -50,6 +56,7 @@ const viewTasks = document.getElementById("view-tasks");
 const viewDaily = document.getElementById("view-daily");
 const viewCalendar = document.getElementById("view-calendar");
 const viewStudy = document.getElementById("view-study");
+const viewClassroom = document.getElementById("view-classroom");
 
 const dailyForm = document.getElementById("daily-form");
 const dailyTitleInput = document.getElementById("daily-title");
@@ -84,11 +91,21 @@ const chatInput = document.getElementById("chat-input");
 const chatSend = document.getElementById("chat-send");
 const chatIncludeTasks = document.getElementById("chat-include-tasks");
 
+const classroomClientForm = document.getElementById("classroom-client-form");
+const classroomClientIdInput = document.getElementById("classroom-client-id");
+const classroomSyncBtn = document.getElementById("classroom-sync-btn");
+const classroomStatus = document.getElementById("classroom-status");
+const classroomSubtitle = document.getElementById("classroom-subtitle");
+const classroomSyncMeta = document.getElementById("classroom-sync-meta");
+const classroomSyncLog = document.getElementById("classroom-sync-log");
+const classroomOrigin = document.getElementById("classroom-origin");
+
 const views = {
   tasks: viewTasks,
   daily: viewDaily,
   calendar: viewCalendar,
   study: viewStudy,
+  classroom: viewClassroom,
 };
 
 function ensureCalendarState() {
@@ -180,6 +197,28 @@ if (chatInput) {
       e.preventDefault();
       chatForm.requestSubmit();
     }
+  });
+}
+
+if (classroomOrigin) {
+  classroomOrigin.textContent = window.location.origin;
+}
+
+if (classroomClientForm) {
+  classroomClientForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const clientId = classroomClientIdInput.value.trim();
+    if (!clientId) return;
+    localStorage.setItem(CLASSROOM_CLIENT_KEY, clientId);
+    classroomClientIdInput.value = "";
+    setClassroomStatus("Client ID saved. Click Sync now to connect your account.", "ok");
+    renderClassroom();
+  });
+}
+
+if (classroomSyncBtn) {
+  classroomSyncBtn.addEventListener("click", () => {
+    startClassroomSync();
   });
 }
 
@@ -295,6 +334,12 @@ function switchView() {
   if (activeView === "study") {
     setStatLabels("Msgs", "Active", "Key");
     renderStudy();
+    return;
+  }
+
+  if (activeView === "classroom") {
+    setStatLabels("Imported", "Courses", "Sync");
+    renderClassroom();
   }
 }
 
@@ -667,6 +712,256 @@ async function askGemini(apiKey, userText, includeTasks) {
   throw new Error(lastError);
 }
 
+function getClassroomClientId() {
+  return localStorage.getItem(CLASSROOM_CLIENT_KEY) || "";
+}
+
+function loadClassroomSyncMeta() {
+  try {
+    const stored = localStorage.getItem(CLASSROOM_SYNC_META_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveClassroomSyncMeta(meta) {
+  localStorage.setItem(CLASSROOM_SYNC_META_KEY, JSON.stringify(meta));
+}
+
+function setClassroomStatus(message, type = "") {
+  if (!classroomStatus) return;
+  classroomStatus.textContent = message;
+  classroomStatus.classList.remove("ok", "error");
+  if (type) classroomStatus.classList.add(type);
+}
+
+function renderClassroom() {
+  const clientId = getClassroomClientId();
+  const meta = loadClassroomSyncMeta();
+  const imported = tasks.filter((t) => t.source === "classroom").length;
+
+  if (classroomClientIdInput && !classroomClientIdInput.value && clientId) {
+    classroomClientIdInput.placeholder = clientId.slice(0, 18) + "…";
+  }
+
+  if (classroomSyncBtn) {
+    classroomSyncBtn.disabled = !clientId;
+  }
+
+  if (clientId) {
+    setClassroomStatus("Client ID saved. Ready to sync.", "ok");
+  } else {
+    setClassroomStatus("Not connected yet");
+  }
+
+  if (classroomSubtitle) {
+    classroomSubtitle.textContent = imported
+      ? `${imported} Classroom task${imported === 1 ? "" : "s"} in your list`
+      : "Import coursework into your tasks";
+  }
+
+  if (classroomSyncMeta) {
+    if (meta?.at) {
+      classroomSyncMeta.textContent = `Last sync ${formatDateTime(meta.at)} · +${meta.added || 0} new · ${meta.updated || 0} updated · ${meta.courses || 0} courses`;
+    } else {
+      classroomSyncMeta.textContent = "No sync yet";
+    }
+  }
+
+  if (classroomSyncLog) {
+    const lines = meta?.log || [];
+    classroomSyncLog.innerHTML = lines.length
+      ? lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")
+      : `<li>Synced assignments will show up here.</li>`;
+  }
+
+  statActive.textContent = imported;
+  statOverdue.textContent = meta?.courses || 0;
+  statDone.textContent = meta ? "On" : "Off";
+}
+
+function waitForGoogle() {
+  return new Promise((resolve, reject) => {
+    if (window.google?.accounts?.oauth2) {
+      resolve();
+      return;
+    }
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries++;
+      if (window.google?.accounts?.oauth2) {
+        clearInterval(timer);
+        resolve();
+      } else if (tries > 40) {
+        clearInterval(timer);
+        reject(new Error("Google sign-in failed to load. Check your connection and refresh."));
+      }
+    }, 250);
+  });
+}
+
+async function startClassroomSync() {
+  const clientId = getClassroomClientId();
+  if (!clientId) {
+    setClassroomStatus("Save a Google OAuth Client ID first.", "error");
+    return;
+  }
+
+  classroomSyncBtn.disabled = true;
+  classroomSyncBtn.textContent = "Connecting…";
+  setClassroomStatus("Waiting for Google sign-in…");
+
+  try {
+    await waitForGoogle();
+
+    await new Promise((resolve, reject) => {
+      const tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: CLASSROOM_SCOPES,
+        callback: async (resp) => {
+          if (resp.error) {
+            reject(new Error(resp.error_description || resp.error));
+            return;
+          }
+          try {
+            classroomSyncBtn.textContent = "Syncing…";
+            setClassroomStatus("Fetching your classes…");
+            const result = await syncClassroomAssignments(resp.access_token);
+            saveClassroomSyncMeta({
+              at: new Date().toISOString(),
+              added: result.added,
+              updated: result.updated,
+              courses: result.courses,
+              log: result.log,
+            });
+            saveTasks();
+            setClassroomStatus(
+              `Sync complete — ${result.added} new, ${result.updated} updated.`,
+              "ok"
+            );
+            renderClassroom();
+            if (activeView === "tasks") renderTasks();
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        },
+        error_callback: (err) => {
+          reject(new Error(err?.message || "Google sign-in was cancelled."));
+        },
+      });
+
+      tokenClient.requestAccessToken({ prompt: "" });
+    });
+  } catch (err) {
+    setClassroomStatus(err.message || "Sync failed.", "error");
+  }
+
+  classroomSyncBtn.disabled = !getClassroomClientId();
+  classroomSyncBtn.textContent = "Sync now";
+}
+
+async function classroomFetch(path, accessToken) {
+  const res = await fetch(`https://classroom.googleapis.com/v1${path}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data?.error?.message || `Classroom API error (${res.status})`);
+  }
+  return data;
+}
+
+async function syncClassroomAssignments(accessToken) {
+  const coursesData = await classroomFetch(
+    "/courses?courseStates=ACTIVE&pageSize=50",
+    accessToken
+  );
+  const courses = coursesData.courses || [];
+  let added = 0;
+  let updated = 0;
+  const log = [];
+
+  for (const course of courses) {
+    let courseWork = [];
+    try {
+      const workData = await classroomFetch(
+        `/courses/${course.id}/courseWork?pageSize=50`,
+        accessToken
+      );
+      courseWork = workData.courseWork || [];
+    } catch (err) {
+      log.push(`${course.name}: skipped (${err.message})`);
+      continue;
+    }
+
+    let courseAdded = 0;
+    for (const work of courseWork) {
+      if (work.state && work.state !== "PUBLISHED") continue;
+
+      const classroomWorkId = `${course.id}:${work.id}`;
+      const dueDate = classroomDueDate(work);
+      const description = (work.description || "").trim().slice(0, 500);
+      const existing = tasks.find((t) => t.classroomWorkId === classroomWorkId);
+
+      if (existing) {
+        let changed = false;
+        if (work.title && existing.title !== work.title) {
+          existing.title = work.title;
+          changed = true;
+        }
+        if (dueDate !== existing.dueDate) {
+          existing.dueDate = dueDate;
+          changed = true;
+        }
+        if (description && existing.description !== description) {
+          existing.description = description;
+          changed = true;
+        }
+        if (changed) updated++;
+        continue;
+      }
+
+      tasks.unshift({
+        id: crypto.randomUUID(),
+        title: work.title || "Untitled assignment",
+        description,
+        importance: "medium",
+        dueDate,
+        category: course.name || "Classroom",
+        bookmarked: false,
+        completed: false,
+        completedAt: null,
+        createdAt: new Date().toISOString(),
+        source: "classroom",
+        classroomWorkId,
+        classroomLink: work.alternateLink || null,
+      });
+      added++;
+      courseAdded++;
+    }
+
+    log.push(
+      `${course.name}: ${courseWork.length} assignment${courseWork.length === 1 ? "" : "s"} · ${courseAdded} new`
+    );
+  }
+
+  if (courses.length === 0) {
+    log.push("No active classes found on this Google account.");
+  }
+
+  return { added, updated, courses: courses.length, log: log.slice(0, 12) };
+}
+
+function classroomDueDate(work) {
+  if (!work.dueDate) return null;
+  const y = work.dueDate.year;
+  const m = String(work.dueDate.month).padStart(2, "0");
+  const d = String(work.dueDate.day).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function getCategories() {
   const cats = new Set();
   tasks.forEach((t) => {
@@ -808,6 +1103,8 @@ function render() {
     renderCalendar();
   } else if (activeView === "study") {
     renderStudy();
+  } else if (activeView === "classroom") {
+    renderClassroom();
   }
 }
 
@@ -1137,11 +1434,13 @@ function renderTaskCard(task) {
           <span class="task-title">${escapeHtml(task.title)}</span>
           <span class="importance-badge ${task.importance}">${task.importance}</span>
           ${task.category ? `<span class="category-badge">${escapeHtml(task.category)}</span>` : ""}
+          ${task.source === "classroom" ? `<span class="category-badge">Classroom</span>` : ""}
         </div>
         ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ""}
         <p class="task-meta">
           ${task.dueDate ? `<span class="due-date ${dueStatus}">${formatDueDate(task.dueDate)}</span><span class="meta-sep">·</span>` : ""}
           <span>Created ${formatDateTime(task.createdAt)}</span>
+          ${task.classroomLink ? `<span class="meta-sep">·</span><a class="task-link" href="${escapeAttr(task.classroomLink)}" target="_blank" rel="noopener noreferrer">Open in Classroom</a>` : ""}
           ${task.completed && task.completedAt ? `<span class="meta-sep">·</span><span>Done ${formatDateTime(task.completedAt)}</span>` : ""}
         </p>
       </div>

@@ -13,6 +13,7 @@ A simple, local task organiser to help you stay on top of what matters.
 - **Daily Tracker** — recurring habits (every day, weekdays, weekends, or custom days) with streaks
 - **Calendar** — month view of tasks by due date
 - **Study Chat** — AI tutor for schoolwork (Google Gemini, free API key)
+- **Google Classroom** — sync coursework into tasks (due dates + course categories)
 - **Auto-saves** to your browser (localStorage)
 
 ## Study Chat setup
@@ -22,6 +23,15 @@ A simple, local task organiser to help you stay on top of what matters.
 3. Ask homework questions, request explanations, or get quiz practice
 
 Your key is stored only in your browser. Don't share it publicly.
+
+## Google Classroom setup
+
+1. Create an OAuth **Web application** client in [Google Cloud Credentials](https://console.cloud.google.com/apis/credentials)
+2. Add your site URL under **Authorised JavaScript origins**
+3. Enable the [Classroom API](https://console.cloud.google.com/apis/library/classroom.googleapis.com)
+4. In the app, open **Classroom**, paste the Client ID, then **Sync now**
+
+Assignments import as tasks (category = class name). Syncing again updates due dates without duplicating.
 
 ## How to use
 
