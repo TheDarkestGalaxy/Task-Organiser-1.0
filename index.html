@@ -336,42 +336,97 @@
             <h2 class="page-title">Google Classroom</h2>
             <p class="task-count" id="classroom-subtitle">Import coursework into your tasks</p>
           </div>
-          <button type="button" class="btn btn-primary" id="classroom-sync-btn" disabled>Sync now</button>
+          <button type="button" class="btn btn-primary" id="classroom-sync-btn" disabled>
+            <span class="btn-icon" aria-hidden="true">↻</span>
+            Sync now
+          </button>
         </header>
 
-        <div class="content-body">
-          <section class="card create-card classroom-setup">
-            <h3 class="card-title">Connect Google Classroom</h3>
-            <p class="study-setup-text">
-              Because this site runs in your browser, you need a free Google Cloud OAuth Client ID
-              (one-time setup). Assignments are imported as tasks with due dates and your course name as the category.
-            </p>
-            <ol class="classroom-steps">
-              <li>Open <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Google Cloud Credentials</a></li>
-              <li>Create an <strong>OAuth client ID</strong> → Application type <strong>Web application</strong></li>
-              <li>Under <strong>Authorised JavaScript origins</strong>, add your site URL (e.g. <code id="classroom-origin"></code>)</li>
-              <li>Enable the <a href="https://console.cloud.google.com/apis/library/classroom.googleapis.com" target="_blank" rel="noopener noreferrer">Google Classroom API</a></li>
-              <li>Paste the Client ID below and save</li>
-            </ol>
-            <form id="classroom-client-form" class="study-key-form">
-              <input
-                type="text"
-                id="classroom-client-id"
-                class="input"
-                placeholder="xxxxx.apps.googleusercontent.com"
-                autocomplete="off"
-                required
-              />
-              <button type="submit" class="btn btn-primary">Save</button>
-            </form>
-            <p class="classroom-status" id="classroom-status">Not connected yet</p>
-          </section>
+        <div class="content-body classroom-body">
+          <div class="classroom-summary" id="classroom-summary">
+            <div class="classroom-stat-card">
+              <span class="classroom-stat-label">Connection</span>
+              <span class="classroom-stat-value" id="classroom-conn-label">Not set up</span>
+              <span class="classroom-stat-hint" id="classroom-conn-hint">Add a Client ID to begin</span>
+            </div>
+            <div class="classroom-stat-card">
+              <span class="classroom-stat-label">Imported tasks</span>
+              <span class="classroom-stat-value" id="classroom-imported-count">0</span>
+              <span class="classroom-stat-hint">From your classes</span>
+            </div>
+            <div class="classroom-stat-card">
+              <span class="classroom-stat-label">Last sync</span>
+              <span class="classroom-stat-value classroom-stat-value-sm" id="classroom-last-sync">Never</span>
+              <span class="classroom-stat-hint" id="classroom-last-sync-hint">Run sync to pull assignments</span>
+            </div>
+          </div>
 
-          <section class="card create-card">
-            <h3 class="card-title">Last sync</h3>
-            <p class="classroom-sync-meta" id="classroom-sync-meta">No sync yet</p>
-            <ul id="classroom-sync-log" class="classroom-sync-log"></ul>
-          </section>
+          <div class="classroom-grid">
+            <section class="card classroom-panel">
+              <div class="classroom-panel-head">
+                <div>
+                  <h3 class="classroom-panel-title">One-time setup</h3>
+                  <p class="classroom-panel-desc">Connect your Google account so assignments can become tasks.</p>
+                </div>
+              </div>
+
+              <div class="classroom-steps-list">
+                <div class="classroom-step">
+                  <span class="classroom-step-num">1</span>
+                  <div class="classroom-step-body">
+                    <strong>Create an OAuth client</strong>
+                    <p>In <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Google Cloud Credentials</a>, create an OAuth client ID as a <em>Web application</em>.</p>
+                  </div>
+                </div>
+                <div class="classroom-step">
+                  <span class="classroom-step-num">2</span>
+                  <div class="classroom-step-body">
+                    <strong>Allow this site</strong>
+                    <p>Under Authorised JavaScript origins, add:</p>
+                    <button type="button" class="classroom-origin-chip" id="classroom-origin-btn" title="Click to copy">
+                      <code id="classroom-origin"></code>
+                      <span class="classroom-copy-label">Copy</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="classroom-step">
+                  <span class="classroom-step-num">3</span>
+                  <div class="classroom-step-body">
+                    <strong>Enable Classroom API</strong>
+                    <p>Turn on the <a href="https://console.cloud.google.com/apis/library/classroom.googleapis.com" target="_blank" rel="noopener noreferrer">Google Classroom API</a> for your project.</p>
+                  </div>
+                </div>
+                <div class="classroom-step">
+                  <span class="classroom-step-num">4</span>
+                  <div class="classroom-step-body">
+                    <strong>Paste your Client ID</strong>
+                    <form id="classroom-client-form" class="classroom-key-form">
+                      <input
+                        type="text"
+                        id="classroom-client-id"
+                        class="input"
+                        placeholder="xxxxx.apps.googleusercontent.com"
+                        autocomplete="off"
+                        required
+                      />
+                      <button type="submit" class="btn btn-primary">Save ID</button>
+                    </form>
+                    <p class="classroom-status" id="classroom-status">Not connected yet</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="card classroom-panel">
+              <div class="classroom-panel-head">
+                <div>
+                  <h3 class="classroom-panel-title">Sync activity</h3>
+                  <p class="classroom-panel-desc" id="classroom-sync-meta">No sync yet — assignments will appear here after you sync.</p>
+                </div>
+              </div>
+              <ul id="classroom-sync-log" class="classroom-sync-log"></ul>
+            </section>
+          </div>
         </div>
       </div>
     </main>

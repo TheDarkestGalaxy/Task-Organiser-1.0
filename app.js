@@ -99,6 +99,12 @@ const classroomSubtitle = document.getElementById("classroom-subtitle");
 const classroomSyncMeta = document.getElementById("classroom-sync-meta");
 const classroomSyncLog = document.getElementById("classroom-sync-log");
 const classroomOrigin = document.getElementById("classroom-origin");
+const classroomOriginBtn = document.getElementById("classroom-origin-btn");
+const classroomConnLabel = document.getElementById("classroom-conn-label");
+const classroomConnHint = document.getElementById("classroom-conn-hint");
+const classroomImportedCount = document.getElementById("classroom-imported-count");
+const classroomLastSync = document.getElementById("classroom-last-sync");
+const classroomLastSyncHint = document.getElementById("classroom-last-sync-hint");
 
 const views = {
   tasks: viewTasks,
@@ -202,6 +208,25 @@ if (chatInput) {
 
 if (classroomOrigin) {
   classroomOrigin.textContent = window.location.origin;
+}
+
+if (classroomOriginBtn) {
+  classroomOriginBtn.addEventListener("click", async () => {
+    const origin = window.location.origin;
+    try {
+      await navigator.clipboard.writeText(origin);
+      const label = classroomOriginBtn.querySelector(".classroom-copy-label");
+      if (label) {
+        label.textContent = "Copied";
+        setTimeout(() => {
+          label.textContent = "Copy";
+        }, 1500);
+      }
+    } catch {
+      // Fallback: select-like feedback
+      setClassroomStatus("Copy this origin manually: " + origin);
+    }
+  });
 }
 
 if (classroomClientForm) {
@@ -742,7 +767,7 @@ function renderClassroom() {
   const imported = tasks.filter((t) => t.source === "classroom").length;
 
   if (classroomClientIdInput && !classroomClientIdInput.value && clientId) {
-    classroomClientIdInput.placeholder = clientId.slice(0, 18) + "…";
+    classroomClientIdInput.placeholder = clientId.slice(0, 22) + "…";
   }
 
   if (classroomSyncBtn) {
@@ -750,10 +775,22 @@ function renderClassroom() {
   }
 
   if (clientId) {
-    setClassroomStatus("Client ID saved. Ready to sync.", "ok");
+    setClassroomStatus("Client ID saved. Click Sync now to pull assignments.", "ok");
+    if (classroomConnLabel) {
+      classroomConnLabel.textContent = "Ready";
+      classroomConnLabel.classList.add("ok");
+    }
+    if (classroomConnHint) classroomConnHint.textContent = "Sign in when you sync";
   } else {
-    setClassroomStatus("Not connected yet");
+    setClassroomStatus("Add your Google OAuth Client ID below to get started.");
+    if (classroomConnLabel) {
+      classroomConnLabel.textContent = "Not set up";
+      classroomConnLabel.classList.remove("ok");
+    }
+    if (classroomConnHint) classroomConnHint.textContent = "Add a Client ID to begin";
   }
+
+  if (classroomImportedCount) classroomImportedCount.textContent = imported;
 
   if (classroomSubtitle) {
     classroomSubtitle.textContent = imported
@@ -761,11 +798,19 @@ function renderClassroom() {
       : "Import coursework into your tasks";
   }
 
-  if (classroomSyncMeta) {
-    if (meta?.at) {
-      classroomSyncMeta.textContent = `Last sync ${formatDateTime(meta.at)} · +${meta.added || 0} new · ${meta.updated || 0} updated · ${meta.courses || 0} courses`;
-    } else {
-      classroomSyncMeta.textContent = "No sync yet";
+  if (meta?.at) {
+    if (classroomLastSync) classroomLastSync.textContent = formatDateTime(meta.at);
+    if (classroomLastSyncHint) {
+      classroomLastSyncHint.textContent = `+${meta.added || 0} new · ${meta.updated || 0} updated · ${meta.courses || 0} courses`;
+    }
+    if (classroomSyncMeta) {
+      classroomSyncMeta.textContent = `Last sync ${formatDateTime(meta.at)} — ${meta.added || 0} new, ${meta.updated || 0} updated across ${meta.courses || 0} courses.`;
+    }
+  } else {
+    if (classroomLastSync) classroomLastSync.textContent = "Never";
+    if (classroomLastSyncHint) classroomLastSyncHint.textContent = "Run sync to pull assignments";
+    if (classroomSyncMeta) {
+      classroomSyncMeta.textContent = "No sync yet — assignments will appear here after you sync.";
     }
   }
 
@@ -773,12 +818,12 @@ function renderClassroom() {
     const lines = meta?.log || [];
     classroomSyncLog.innerHTML = lines.length
       ? lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")
-      : `<li>Synced assignments will show up here.</li>`;
+      : `<li class="empty">Nothing synced yet. Once connected, each class will show up here.</li>`;
   }
 
   statActive.textContent = imported;
   statOverdue.textContent = meta?.courses || 0;
-  statDone.textContent = meta ? "On" : "Off";
+  statDone.textContent = clientId ? "On" : "Off";
 }
 
 function waitForGoogle() {
@@ -809,7 +854,7 @@ async function startClassroomSync() {
   }
 
   classroomSyncBtn.disabled = true;
-  classroomSyncBtn.textContent = "Connecting…";
+  setClassroomSyncButtonLabel("Connecting…");
   setClassroomStatus("Waiting for Google sign-in…");
 
   try {
@@ -825,7 +870,7 @@ async function startClassroomSync() {
             return;
           }
           try {
-            classroomSyncBtn.textContent = "Syncing…";
+            setClassroomSyncButtonLabel("Syncing…");
             setClassroomStatus("Fetching your classes…");
             const result = await syncClassroomAssignments(resp.access_token);
             saveClassroomSyncMeta({
@@ -859,7 +904,12 @@ async function startClassroomSync() {
   }
 
   classroomSyncBtn.disabled = !getClassroomClientId();
-  classroomSyncBtn.textContent = "Sync now";
+  setClassroomSyncButtonLabel("Sync now");
+}
+
+function setClassroomSyncButtonLabel(label) {
+  if (!classroomSyncBtn) return;
+  classroomSyncBtn.innerHTML = `<span class="btn-icon" aria-hidden="true">↻</span>${escapeHtml(label)}`;
 }
 
 async function classroomFetch(path, accessToken) {
